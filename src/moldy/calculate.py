@@ -26,7 +26,7 @@ a           =   np.sqrt(3)*bond # 2.462
 h           =   3.38 
 dt          =   2               #units: fs
 eps_dict    =   {1:[2.82, ''], 2:[45.44, '_Topi']}
-idx_epsCC   =   2 
+idx_epsCC   =   1 
 length      =   2*20            # slab length has to be integer*2
 width       =   1               # slab width
 
@@ -46,7 +46,7 @@ params      =   {'bond':bond, 'a':a, 'h':h}
 def runMoldy(N, save = False):
     
     # DEFINE FILES
-    mdfile, mdlogfile = get_fileName(N, epsCC, 'tear_E')  
+    mdfile, mdlogfile = get_fileName(N, epsCC, 'tear_E', 'airebo')  
     
     # GRAPHENE SLAB
     atoms       =   make_graphene_slab(a,h,width,length,N, passivate = True)[3]
@@ -55,7 +55,7 @@ def runMoldy(N, save = False):
     constraints =   []
     
     zset        =   find_layers(atoms.positions.copy())[0]
-    left        =   get_mask(atoms.positions.copy(), 'left', 2, bond)
+    left        =   get_mask(atoms.positions.copy(), 'left', 2, bond)[0]
     rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols())
     
     fix_left    =   FixAtoms(mask = left)
@@ -72,7 +72,7 @@ def runMoldy(N, save = False):
     
     # CALCULATOR LAMMPS 
     parameters = {'pair_style':'airebo 3.0',
-                  'pair_coeff':['* * CH.airebo_Topi C H'],
+                  'pair_coeff':['* * CH.airebo%s C H' %eps_dict[idx_epsCC][1]],
                   'mass'      :['* 12.0'],
                   'units'     :'metal', 
                   'boundary'  :'f p f'}

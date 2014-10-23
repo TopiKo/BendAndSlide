@@ -33,6 +33,74 @@ def get_save_atoms(atoms):
     new_atoms.set_pbc((pbc[0], pbc[1], pbc[2]))   
     return new_atoms    
 
+def passivate(atoms, ind):
+    
+    if ind == 'rend':
+        ch_bond = 1.1
+        from moldy.atom_groups import get_ind
+        rend_ind    = get_ind(atoms.positions.copy(), 'hrend')
+        h_posits    = atoms.positions[rend_ind].copy()
+        h_posits[:,0] += ch_bond
+        for posit in h_posits:
+            atoms += Atom('H', position = posit)
+        return atoms
+        
+def remove_atoms_from_bot_right_end(atoms, fix_top, rm_ind):
+    
+    positions   =   atoms.positions.copy()
+    symbs       =   atoms.get_chemical_symbols()
+        
+    new_atoms   =   Atoms()
+    for i, pos in enumerate(positions):
+        if i not in rm_ind:
+            new_atoms += Atom(symbs[i], position = pos)    
+    new_atoms.set_cell(atoms.get_cell())
+    pbc     =  atoms.get_pbc()
+    new_atoms.set_pbc(pbc)   
+    return new_atoms    
+
+def make_atoms_file(atoms, address, inds_dict):
+    
+    
+    def which_group(i):
+        for group in inds_dict:
+            
+            for j in inds_dict[group][1]:
+                if i == j:
+                    return inds_dict[group][0]
+        raise 
+    
+    def groups():
+        
+        groups_string       =   ''
+        for group in inds_dict:
+            groups_string   +=   'group ' + group + ' type ' + str(inds_dict[group][0]) + ' \n'
+        return groups_string
+        
+    m   =   len(inds_dict)
+    
+    f = open(address, 'w')
+    
+    l = atoms.get_cell().diagonal()
+    
+    print>>f, '\n\n\n'  
+    print>>f, len(atoms), 'atoms'
+    print>>f, m,'atom types'
+    print>>f, '0 %.9f xlo xhi' %l[0]
+    print>>f, '0 %.9f ylo yhi' %l[1]
+    print>>f, '0 %.9f zlo zhi' %l[2]
+    print>>f, '\n\nAtoms\n'
+    
+    for i, a in enumerate(atoms):
+        r = a.position
+        print>>f,i+1, int(which_group(i)), r[0], r[1], r[2]
+   
+    
+    group_symbs = (m- 1)*'C ' + 'H'
+    group_string =  groups()
+    return group_symbs, group_string
+    
+
 def make_graphene_slab(a,h,width,length,N, pbc= (False, True, False), passivate = False):
     # make ML graphene slab
     atoms = Graphite( 'C',latticeconstant=(a,2*h),size=(width,length,N) )
@@ -58,13 +126,15 @@ def make_graphene_slab(a,h,width,length,N, pbc= (False, True, False), passivate 
     print 'structure ready'
     
     if passivate:
-        ch_bond = 1.1
-        from moldy.atom_groups import get_ind
-        rend_ind    = get_ind(atoms.positions.copy(), 'arend')
-        h_posits    = atoms.positions[rend_ind].copy()
-        h_posits[:,0] += ch_bond
-        for posit in h_posits:
-            atoms += Atom('H', position = posit)
+        
+        atoms = passivate(atoms, 'rend')
+        #ch_bond = 1.1
+        #from moldy.atom_groups import get_ind
+        #rend_ind    = get_ind(atoms.positions.copy(), 'hrend')
+        #h_posits    = atoms.positions[rend_ind].copy()
+        #h_posits[:,0] += ch_bond
+        #for posit in h_posits:
+        #    atoms += Atom('H', position = posit)
         
     return H,W,L,atoms
 
@@ -205,8 +275,9 @@ def find_layers(positions):
 def get_fileName(N, epsCC, indent, *args):
     
     if indent == 'tear_E':
-        mdfile      =   '/space/tohekorh/SurfAndSlide/files/md_N=%i_epsCC=%.2f.traj' %(N, epsCC)
-        mdlogfile   =   '/space/tohekorh/SurfAndSlide/files/md_N=%i_epsCC=%.2f.log' %(N, epsCC)
+        potential   =   args[0]
+        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f.traj' %(potential,N, epsCC)
+        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f.log' %(potential, N, epsCC)
         return mdfile, mdlogfile
     else:
         raise
