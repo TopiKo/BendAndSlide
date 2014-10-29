@@ -30,6 +30,9 @@ N           =   2
 
 path        =   '/space/tohekorh/BendAndSlide/test_KC/'
 
+
+
+
 def find_adhesion_potential(params):
     
     bond    =   params['bond']
@@ -104,7 +107,6 @@ def find_adhesion_potential(params):
         view(atoms)
         
         #print constraints
-        
         
         zmax        =   np.amax(atoms.positions[bottom][:,2])
     

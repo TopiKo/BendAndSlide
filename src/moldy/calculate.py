@@ -16,7 +16,7 @@ from ase.io.trajectory import PickleTrajectory
 from aid.help import make_graphene_slab, saveAndPrint, get_fileName
 from atom_groups import get_mask, get_ind
 from ase.md.langevin import Langevin
-from aid.my_constraint import add_adhesion
+from aid.my_constraint import add_adhesion, KC_potential
 from aid.help import find_layers
 from ase.visualize import view 
 
@@ -29,6 +29,7 @@ eps_dict    =   {1:[2.82, ''], 2:[45.44, '_Topi']}
 idx_epsCC   =   1 
 length      =   2*20            # slab length has to be integer*2
 width       =   1               # slab width
+fix_top     =   1 
 
 # SIMULATION PARAMS
 M           =   int(1e4)        # number of moldy steps
@@ -54,13 +55,15 @@ def runMoldy(N, save = False):
     # FIX
     constraints =   []
     
-    zset        =   find_layers(atoms.positions.copy())[0]
+    zset, layer_inds     =   find_layers(atoms.positions.copy())
     left        =   get_mask(atoms.positions.copy(), 'left', 2, bond)[0]
-    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols())
+    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fix_top)
     
     fix_left    =   FixAtoms(mask = left)
     
-    add_bend    =   add_adhesion(params, np.max(zset))
+    add_bend    =   add_adhesion(params, layer_inds, np.max(zset))
+    add_kc      =   KC_potential(params, layer_inds, np.max(zset))
+
     
     for ind in rend:
         fix_deform  =   FixedPlane(ind, (0., 0., 1.))
@@ -68,6 +71,7 @@ def runMoldy(N, save = False):
     
     constraints.append(fix_left)
     constraints.append(add_bend)
+    constraints.append(add_kc)
     # END FIX
     
     # CALCULATOR LAMMPS 
@@ -121,7 +125,7 @@ def runMoldy(N, save = False):
 
 #adh_pot    =   np.loadtxt('adh_potential.gz')   
 #print adh_pot
-#runMoldy(3)
-for N in range(3, 15):    
-    runMoldy(N, True)   
+runMoldy(3)
+#for N in range(3, 15):    
+#    runMoldy(N, True)   
     

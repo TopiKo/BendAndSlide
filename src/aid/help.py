@@ -23,7 +23,7 @@ def saveAndPrint(atoms, traj = None, print_dat = False):
 
 def get_save_atoms(atoms):
     positions = atoms.positions.copy()
-    symbs    = atoms.get_chemical_symbols()
+    symbs     = atoms.get_chemical_symbols()
         
     new_atoms = Atoms()
     for i, pos in enumerate(positions):
@@ -33,7 +33,7 @@ def get_save_atoms(atoms):
     new_atoms.set_pbc((pbc[0], pbc[1], pbc[2]))   
     return new_atoms    
 
-def passivate(atoms, ind):
+def passivate_right(atoms, ind):
     
     if ind == 'rend':
         ch_bond = 1.1
@@ -127,7 +127,7 @@ def make_graphene_slab(a,h,width,length,N, pbc= (False, True, False), passivate 
     
     if passivate:
         
-        atoms = passivate(atoms, 'rend')
+        atoms = passivate_right(atoms, 'rend')
         #ch_bond = 1.1
         #from moldy.atom_groups import get_ind
         #rend_ind    = get_ind(atoms.positions.copy(), 'hrend')

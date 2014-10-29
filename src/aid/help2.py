@@ -11,7 +11,7 @@ def extend_structure(ia_length, posits, pbc, cell):
     posits_ext  =   posits.copy()
     for i in range(3):  
         if pbc[i]:
-            n   = int(1 + ia_length/cell[i]) 
+            n           =   int(1 + (ia_length + 5)/cell[i]) 
             
             add_posits  =   np.zeros((2*n*len(posits_ext), 3))
             m           =   0 
@@ -55,7 +55,8 @@ def nrst_neigh(posits, posits_ext, key, *args):
         
         d               =   args[0]
         n               =   len(posits)
-        layer_inds_ext  =   find_layers(posits_ext)[1]
+        #layer_inds_ext  =   find_layers(posits_ext)[1]
+        layer_inds_ext  =   args[1]
         neighbours_ia   =   np.empty(n, dtype = object)
         
         for i in range(n):

@@ -72,7 +72,7 @@ def find_adhesion_potential(params):
         return atoms.get_potential_energy()/natoms  
 
     
-    def rebo(z):
+    def lj(z):
         
         ecc     =   0.002843732471143
         sigmacc =   3.4
@@ -95,8 +95,8 @@ def find_adhesion_potential(params):
     ax          =   fig.add_subplot(111)
     
     ax.plot(adh_pot[:,0], adh_pot[:,1], label = 'lamps')
-    ax.plot(zrange, rebo(zrange)[0] - np.min(rebo(zrange)[0]), label = 'rebo')
-    ax.plot(zrange, rebo(zrange)[1], label = 'rebo')
+    ax.plot(zrange, lj(zrange)[0] - np.min(lj(zrange)[0]), label = 'lj')
+    ax.plot(zrange, lj(zrange)[1], label = 'lj')
     
     ax.scatter(hmin, 0)
 
