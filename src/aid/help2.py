@@ -5,26 +5,28 @@ Created on 28.10.2014
 '''
 import numpy as np
 from aid.help import find_layers
+from itertools import permutations
 
 def extend_structure(ia_length, posits, pbc, cell):
-            
-    posits_ext  =   posits.copy()
-    for i in range(3):  
+    
+    posits_ext = posits.copy()
+    
+    for i in range(3):
         if pbc[i]:
-            n           =   int(1 + (ia_length + 5)/cell[i]) 
             
-            add_posits  =   np.zeros((2*n*len(posits_ext), 3))
-            m           =   0 
-            kset        =   np.concatenate((range(-n,0), range(1,n + 1)))
+            n = int(1 + (ia_length + 5)/cell[i])
+            add_posits = np.zeros((2*n*len(posits_ext), 3))
+            m = 0
+            kset = np.concatenate((range(-n,0), range(1,n + 1)))
+            
             for k in kset:
                 for pos in posits_ext:
-                    add_posits[m]       =   pos
-                    add_posits[m][i]   +=   k*cell[i]
+                    add_posits[m] = pos
+                    add_posits[m][i] += k*cell[i]
                     m += 1
-                
             posits_ext = np.concatenate((posits_ext, add_posits))
-            
-    return posits_ext   
+    
+    return posits_ext 
 
 def which_layer(i, layer_inds):
     
@@ -78,6 +80,42 @@ def nrst_neigh(posits, posits_ext, key, *args):
 
         
         return neighbours_ia
+    
+def map_seq(m, n):
 
     
+    perms       =   []    
+    if n == 1:
+        for i in range(-m, m +1):   #, n
+            if np.abs(i) == m:
+                perms.append([i])    
+
+    elif n == 2:
+        for i in range(-m, m +1):   #, n
+            for j in range(-m, m +1):
+                if np.abs(i) + np.abs(j) == m:
+                    perms.append([i,j])    
+        
+    elif n == 3:
+        for i in range(-m, m +1):   #, n
+            for j in range(-m, m +1):
+                for k in range(-m, m +1):
+                    if np.abs(i) + np.abs(j) + np.abs(k) == m:
+                        perms.append([i,j, k])    
+    return perms
+                   
+def map_rj(rj, map_seq, pbc, cell):      
+    
+    rjs     =   np.zeros((len(map_seq), 3))
+    
+    for k, map_s in enumerate(map_seq):
+        r   =   rj.copy()
+        l   =   0
+        for i in range(3):
+            if pbc[i]:
+                r[i]    +=  map_s[l]*cell[i]  
+                l       +=  1
+        rjs[k]   =   r
+    
+    return rjs
         
