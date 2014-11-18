@@ -118,4 +118,30 @@ def map_rj(rj, map_seq, pbc, cell):
         rjs[k]   =   r
     
     return rjs
+
+def local_normal(i, posits_ext, layer_neighbors):
+    
+    ri          =   posits_ext[i]
+    
+    tang_vec    =   np.zeros((len(layer_neighbors[i]), 3))
+    
+    for k, j in enumerate(layer_neighbors[i]):
+        tang_vec[k]  =     posits_ext[j] - ri 
+    
+    if len(tang_vec) == 3:
+        normal  =   np.cross(tang_vec[0], tang_vec[1])/np.linalg.norm(np.cross(tang_vec[0], tang_vec[1])) \
+                +   np.cross(tang_vec[2], tang_vec[0])/np.linalg.norm(np.cross(tang_vec[2], tang_vec[0])) \
+                +   np.cross(tang_vec[1], tang_vec[2])/np.linalg.norm(np.cross(tang_vec[1], tang_vec[2])) 
+        
+        normal  =   normal/np.linalg.norm(normal)
+        
+        return normal
+     
+    elif  len(tang_vec) == 2:
+        normal  =   np.cross(tang_vec[0], tang_vec[1])/np.linalg.norm(np.cross(tang_vec[0], tang_vec[1]))
+        
+        return normal
+        
+    else:
+        raise
         

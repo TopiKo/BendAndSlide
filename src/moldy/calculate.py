@@ -16,7 +16,9 @@ from ase.io.trajectory import PickleTrajectory
 from aid.help import make_graphene_slab, saveAndPrint, get_fileName
 from atom_groups import get_mask, get_ind
 from ase.md.langevin import Langevin
-from aid.my_constraint import add_adhesion, KC_potential
+#from aid.my_constraint import add_adhesion, KC_potential
+from aid.KC_potential_constraint import KC_potential
+from aid.LJ_potential_constraint import add_adhesion
 from aid.help import find_layers
 from ase.visualize import view 
 
@@ -24,45 +26,49 @@ from ase.visualize import view
 bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
 h           =   3.38 
-dt          =   2               #units: fs
-eps_dict    =   {1:[2.82, ''], 2:[45.44, '_Topi']}
-idx_epsCC   =   1 
-length      =   2*20            # slab length has to be integer*2
+dt          =   2               # units: fs
+length      =   2*5             # slab length has to be integer*2
 width       =   1               # slab width
-fix_top     =   1 
+fix_top     =   0               # 
 
 # SIMULATION PARAMS
 M           =   int(1e4)        # number of moldy steps
-d           =   3*h            # maximum separation
+d           =   3*h             # maximum separation
 dz          =   d/M
 dt          =   2               # fs
 T           =   0.              # temperature
 interval    =   10              # interval for writing stuff down
-epsCC, eps_str \
-            = eps_dict[idx_epsCC]  
     
 
-params      =   {'bond':bond, 'a':a, 'h':h}
 
 def runMoldy(N, save = False):
     
+    params      =   {'bond':bond, 'a':a, 'h':h}
+    
     # DEFINE FILES
-    mdfile, mdlogfile = get_fileName(N, epsCC, 'tear_E', 'airebo')  
+    mdfile, mdlogfile, mdrelax = get_fileName(N, 'tear_E_rebo+KC')  
     
     # GRAPHENE SLAB
     atoms       =   make_graphene_slab(a,h,width,length,N, passivate = True)[3]
     
+    
+    params['positions'] =   atoms.positions.copy() 
+    params['pbc']       =   atoms.get_pbc()
+    params['cell']      =   atoms.get_cell().diagonal()
+    params['ia_dist']   =   14
+    params['chemical_symbols']  =   atoms.get_chemical_symbols()
+    
     # FIX
     constraints =   []
     
-    zset, layer_inds     =   find_layers(atoms.positions.copy())
+    #zset, layer_inds     =   find_layers(atoms.positions.copy())
     left        =   get_mask(atoms.positions.copy(), 'left', 2, bond)[0]
     rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fix_top)
     
     fix_left    =   FixAtoms(mask = left)
     
-    add_bend    =   add_adhesion(params, layer_inds, np.max(zset))
-    add_kc      =   KC_potential(params, layer_inds, np.max(zset))
+    add_adh     =   add_adhesion(params)
+    add_kc      =   KC_potential(params)
 
     
     for ind in rend:
@@ -70,13 +76,13 @@ def runMoldy(N, save = False):
         constraints.append(fix_deform)
     
     constraints.append(fix_left)
-    constraints.append(add_bend)
+    constraints.append(add_adh)
     constraints.append(add_kc)
     # END FIX
     
     # CALCULATOR LAMMPS 
-    parameters = {'pair_style':'airebo 3.0',
-                  'pair_coeff':['* * CH.airebo%s C H' %eps_dict[idx_epsCC][1]],
+    parameters = {'pair_style':'rebo',
+                  'pair_coeff':['* * CH.airebo C H'],
                   'mass'      :['* 12.0'],
                   'units'     :'metal', 
                   'boundary'  :'f p f'}
@@ -95,8 +101,8 @@ def runMoldy(N, save = False):
     
     
     # RELAX
-    atoms.set_constraint(add_bend)
-    dyn = BFGS(atoms)
+    atoms.set_constraint([add_kc, add_adh])
+    dyn = BFGS(atoms, trajectory = mdrelax)
     dyn.run(fmax=0.05)
     
     # FIX AFTER RELAXATION
@@ -123,9 +129,8 @@ def runMoldy(N, save = False):
         header = 't [fs], d [Angstrom], epot/Atom [eV], ekin/Atom [eV], etot/Atom [eV]'
         np.savetxt(mdlogfile, data, header = header)  
 
-#adh_pot    =   np.loadtxt('adh_potential.gz')   
-#print adh_pot
-runMoldy(3)
+
+runMoldy(3, True)
 #for N in range(3, 15):    
 #    runMoldy(N, True)   
     

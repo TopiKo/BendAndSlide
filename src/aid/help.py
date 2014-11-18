@@ -272,13 +272,20 @@ def find_layers(positions):
                 
     return layers, inds_L
 
-def get_fileName(N, epsCC, indent, *args):
+def get_fileName(N, indent, *args):
     
     if indent == 'tear_E':
         potential   =   args[0]
+        epsCC       =   args[1]
         mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f.traj' %(potential,N, epsCC)
         mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f.log' %(potential, N, epsCC)
         return mdfile, mdlogfile
+    if indent == 'tear_E_rebo+KC':
+        mdrelax     =   '/space/tohekorh/BendAndSlide/files/%s/BFGS_init=%i.traj' %('rebo+KC',N)
+        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i.traj' %('rebo+KC',N)
+        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i.log' %('rebo+KC', N)
+        return mdfile, mdlogfile, mdrelax
+    
     else:
         raise
     

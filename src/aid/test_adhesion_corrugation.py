@@ -16,17 +16,19 @@ import matplotlib.pyplot as plt
 from ase.calculators.lammpsrun import LAMMPS
 from ase.optimize import BFGS
 from ase.io.trajectory import PickleTrajectory
-from my_constraint2 import LJ_potential, KC_potential
+from LJ_potential_constraint import LJ_potential
+from KC_potential_constraint import KC_potential
 from help import get_save_atoms
 #from scipy.optimize import minimize
 from ase.visualize import view
 from aid.help import find_layers
+
 # fixed parameters
 bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
 h           =   3.38 
 
-length      =   2*2             # slab length has to be integer*2
+length      =   2*1             # slab length has to be integer*2
 width       =   1               # slab width
 N           =   2
 
@@ -90,12 +92,13 @@ def get_optimal_h(atoms, bottom, top, natoms, dyn = False):
         
         hmin    =   fmin(get_epot, 3.34)
         emin    =   get_epot(hmin)
+        
         atoms.positions = pos_init
         print 'optimal height= %.2f and e=%.2f' %(hmin, emin) 
         return emin, hmin
     else:
         dyn         =   BFGS(atoms)
-        dyn.run(fmax=0.05)
+        dyn.run(fmax=0.03)
         e           =   atoms.get_potential_energy()/natoms
         layers      =   find_layers(atoms.positions)[0]
         hmin        =   layers[1] - layers[0]
@@ -123,7 +126,7 @@ def get_corrugation_energy(atoms, constraints, bond, bottom, top, indent, m):
                 new_pos[iat][0] += x 
         
         atoms.positions =   new_pos
-        e, hmin         =   get_optimal_h(atoms, bottom, top, natoms, True)
+        e, hmin         =   get_optimal_h(atoms, bottom, top, natoms, False)
         #e               =   atoms.get_potential_energy()/natoms
         print x, e        
         
@@ -158,7 +161,7 @@ def plot_adhesion(datas):
     ax.set_xlabel('height, Angst')
     ax.set_ylabel('Pot. E, eV')
     plt.legend(frameon = False)
-    plt.savefig(path + 'pictures/Adhesion_energy.svg')
+    #plt.savefig(path + 'pictures/Adhesion_energy.svg')
     plt.show()    
 
 def plot_corrugation(datas):
@@ -170,15 +173,14 @@ def plot_corrugation(datas):
     for indent in datas:
         
         corr_pot         =   datas[indent]
-        print corr_pot
         #print corr_pot[1,2]   
         #print corr_pot[:,2]
         corr_pot[:,2]    =   corr_pot[:,2] - corr_pot[0,2]   
         #xmin             =   corr_pot[np.where(corr_pot[:,2] == np.min(corr_pot[:,2]))[0][0], 0]
-        AA               = np.where(np.abs((corr_pot[:,0] - bond)) < 0.01)[0][0]
-        print corr_pot[AA, 2]
-        print corr_pot[0, 1]
-        print corr_pot[AA, 1] - corr_pot[0, 1]
+        #AA               = np.where(np.abs((corr_pot[:,0] - bond)) < 0.01)[0][0]
+        #print corr_pot[AA, 2]
+        #print corr_pot[0, 1]
+        #print corr_pot[AA, 1] - corr_pot[0, 1]
         
          
         ax.plot(corr_pot[:,0], corr_pot[:,2], '-o', label = indent)
@@ -190,7 +192,7 @@ def plot_corrugation(datas):
     ax.set_xlabel('x, Angst')
     ax.set_ylabel('Pot. E, eV')
     plt.legend(frameon = False)
-    plt.savefig(path + 'pictures/corrugation_energy.svg')
+    #plt.savefig(path + 'pictures/corrugation_energy.svg')
     plt.show()    
     
 def get_adhesion_LJ(zset, CperArea):
@@ -222,6 +224,7 @@ def corrugationAndAdhesion(params):
     params['cell']          =   atoms_init.get_cell().diagonal()
     params['pbc']           =   atoms_init.get_pbc()
     params['ia_dist']       =   14
+    params['chemical_symbols']  =   atoms_init.get_chemical_symbols()
     
     hmax                    =   (params['cell'][2] - h)/2.1
     
@@ -237,10 +240,10 @@ def corrugationAndAdhesion(params):
     fix_bot             =   FixAtoms(mask = bottom)
     
     add_KC              =   KC_potential(params)
+    add_LJ              =   LJ_potential(params)
     
-    add_adh_e           =   LJ_potential(params)
     constraint_fb_kc_e  =   [fix_bot, add_KC]
-    constraint_fb_lj_e  =   [fix_bot, add_adh_e]
+    constraint_fb_lj_e  =   [fix_bot, add_LJ]
     constraint_fb       =   [fix_bot]
     #constraint_sets.append([fix_bot, add_adh])
 
@@ -285,11 +288,23 @@ def corrugationAndAdhesion(params):
             atoms.set_calculator(calc)
             atoms.set_constraint(constraints)
             
-            dyn         =   BFGS(atoms)
+            '''
+            new_pos     =   atoms_init.positions.copy()
+            for iat in range(len(atoms)):
+                if top[iat]:
+                    new_pos[iat][2] += new_pos[iat][0]*(-0.3) 
+                    new_pos[iat][0] += bond/2 
+            atoms.positions =   new_pos
+            '''
+        
+            #view(atoms)
+            dyn         =   BFGS(atoms, trajectory='/space/tohekorh/BendAndSlide/test_KC/bfgs_bilayer.traj')
             dyn.run(fmax=0.05)
             
+            
             # SLAB IS RELAXED
-            #view(atoms)
+            #
+            
             print 'Adhesion'
             data_adh[indent]    =   get_adhesion_energy(atoms, hmax, \
                                                         bottom, top, indent, acc)
@@ -300,7 +315,7 @@ def corrugationAndAdhesion(params):
                                                            bond, bottom, top, indent, acc)
             
         else:
-            data_adh['LJ']  =  get_adhesion_LJ(data_adh['rebo_KC'][:,0], CperArea) 
+            data_adh['LJ']      =   get_adhesion_LJ(data_adh['rebo_KC'][:,0], CperArea) 
     
     #PLOT and save
     plot_adhesion(data_adh)
@@ -308,7 +323,7 @@ def corrugationAndAdhesion(params):
        
     
 
-params      =   {'bond':bond, 'a':a, 'h':h, 'acc':7}  
+params      =   {'bond':bond, 'a':a, 'h':h, 'acc':13}  
 #plot_corrugation(None)
 corrugationAndAdhesion(params) 
     
