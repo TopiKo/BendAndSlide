@@ -1,8 +1,9 @@
 '''
-Created on 24.9.2014
+Created on 27.1.2015
 
 @author: tohekorh
 '''
+
 # This class creates the deforming structure.
 # *************************************
 
@@ -27,13 +28,13 @@ bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
 h           =   3.38 
 dt          =   2               # units: fs
-length      =   4*12            # slab length has to be integer*2
+length      =   2*12            # slab length has to be integer*2
 width       =   1               # slab width
 fix_top     =   0               # 
 
 # SIMULATION PARAMS
 M           =   int(1e4)        # number of moldy steps
-d           =   6*h             # maximum separation
+d           =   3*h             # maximum separation
 dz          =   d/M
 dt          =   2               # fs
 T           =   0.              # temperature
@@ -46,16 +47,19 @@ def run_moldy(N, save = False):
     params      =   {'bond':bond, 'a':a, 'h':h}
     
     # DEFINE FILES
-    mdfile, mdlogfile, mdrelax = get_fileName(N, 'tear_E_rebo+KC')  
-    
+    mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC')[0]  
+    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC', 'continue_release')[:2]    
+
+    print mdfile, mdlogfile
     # GRAPHENE SLAB
-    atoms       =   make_graphene_slab(a,h,width,length,N, passivate = True)[3]
+    traj        =   PickleTrajectory(mdfile_read, 'r')
     
+    atoms       =   traj[0]
     
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
     params['cell']      =   atoms.get_cell().diagonal()
-    params['ia_dist']   =   14
+    params['ia_dist']   =   10
     params['chemical_symbols']  =   atoms.get_chemical_symbols()
     
     # FIX
@@ -73,7 +77,7 @@ def run_moldy(N, save = False):
     
     for ind in rend:
         fix_deform  =   FixedPlane(ind, (0., 0., 1.))
-        constraints.append(fix_deform)
+        #constraints.append(fix_deform)
     
     constraints.append(fix_left)
     constraints.append(add_adh)
@@ -88,6 +92,8 @@ def run_moldy(N, save = False):
                   'boundary'  :'f p f'}
     
     calc = LAMMPS(parameters=parameters) 
+    
+    atoms   =   traj[-1]
     atoms.set_calculator(calc)
     # END CALCULATOR
     
@@ -101,10 +107,6 @@ def run_moldy(N, save = False):
     
     view(atoms)
     
-    # RELAX
-    atoms.set_constraint([add_kc, add_adh])
-    dyn = BFGS(atoms, trajectory = mdrelax)
-    dyn.run(fmax=0.05)
     
     # FIX AFTER RELAXATION
     atoms.set_constraint(constraints)
@@ -115,8 +117,8 @@ def run_moldy(N, save = False):
     print 'Start the dynamics for N = %i' %N
     
     for i in range(0, M):
-        for ind in rend:
-            atoms[ind].position[2] -= dz 
+        #for ind in rend:
+        #    atoms[ind].position[2] -= dz 
         dyn.run(1)
         
         if i%interval == 0:
@@ -131,7 +133,7 @@ def run_moldy(N, save = False):
         np.savetxt(mdlogfile, data, header = header)  
 
 
-run_moldy(12, True)
+run_moldy(5, True)
 #for N in range(3, 15):    
 #    run_moldy(N, True)   
     

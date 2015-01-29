@@ -60,7 +60,7 @@ class KC_potential_ij:
                      +  self.C4*(p/self.delta)**4)
     
     
-    def get_neigh_layer_indices(self, i, lay_inds):
+    def get_neigh_layer_indices_old(self, i, lay_inds):
             
         ret_lay_ind = []
         if i > 0:
@@ -124,7 +124,7 @@ class KC_potential_ij:
         ni              =   local_normal(i, posits_ext, self.layer_neighbors)
         dni             =   gradN(ri, i)
         
-        neigh_indices   =   self.get_neigh_layer_indices(0, self.layer_indices)    
+        neigh_indices   =   self.get_neigh_layer_indices_old(0, self.layer_indices)    
         
         for j in neigh_indices:
             rj              =   positions[j]
@@ -205,7 +205,7 @@ class KC_potential_ij:
         ni              =   local_normal(i, posits_ext, self.layer_neighbors)
         ri              =   positions[i]
         
-        neigh_indices   =   self.get_neigh_layer_indices(0, self.layer_indices)       
+        neigh_indices   =   self.get_neigh_layer_indices_old(0, self.layer_indices)       
         
         for j in neigh_indices:
             rj          =   positions[j]

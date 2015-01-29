@@ -1,7 +1,7 @@
 import numpy as np
 from help2 import map_seq, map_rj
 from aid.help import find_layers
-
+import time
 
 class add_adhesion:
     
@@ -23,6 +23,7 @@ class add_adhesion:
         
     def adjust_forces(self, positions, forces):
         
+        tadh1   =   time.time()
         def get_force_rebo(h):
             # Integrate the rebo potential to yield E_adh/atom, see verification in 
             # calc_adhesion. Derivative of that is dE_adh/dh = -force/atom  
@@ -35,6 +36,9 @@ class add_adhesion:
             f0              =   forces[i]
             forces[i]       =   [f0[0], f0[1], f0[2] + get_force_rebo(h)]
 
+        tadh2   =   time.time()
+        print 'time adh = %.2fs' %(tadh2 - tadh1)
+            
 class LJ_potential:
     
     def __init__(self, params):

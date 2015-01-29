@@ -102,19 +102,27 @@ def make_atoms_file(atoms, address, inds_dict):
     
 
 def make_graphene_slab(a,h,width,length,N, pbc= (False, True, False), passivate = False):
+    
+    
     # make ML graphene slab
-    atoms = Graphite( 'C',latticeconstant=(a,2*h),size=(width,length,N) )
+    atoms = Graphite('C',latticeconstant=(a,2*h),size=(width,length,N) )
+    
     l1,l2,l3 = atoms.get_cell().diagonal()
     atoms.set_cell(atoms.get_cell().diagonal())
     atoms.set_scaled_positions(atoms.get_scaled_positions())
     atoms.rotate('z',pi/2)
+    
      
     z = atoms.get_positions()[:,2]
     del atoms[ list(arange(len(z))[z>z.min()+(N-1)*h+h/2]) ]    
+    
     atoms.set_cell( (l2,l1,l3) )
+    atoms.center()
+    atoms.translate((a/4, 0., 0.))
+    
     atoms.set_scaled_positions( atoms.get_scaled_positions() )
     atoms.set_pbc(pbc)
-
+    
     W = atoms.get_cell().diagonal()[1]
     H = (N-1)*h
     L = atoms.get_positions()[:,0].ptp()/2
@@ -277,13 +285,18 @@ def get_fileName(N, indent, *args):
     if indent == 'tear_E':
         potential   =   args[0]
         epsCC       =   args[1]
-        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f.traj' %(potential,N, epsCC)
-        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f.log' %(potential, N, epsCC)
+        cont        =   args[2]
+        
+        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f%s.traj' %(potential,N, epsCC, cont)
+        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f%s.log' %(potential, N, epsCC, cont)
         return mdfile, mdlogfile
     if indent == 'tear_E_rebo+KC':
-        mdrelax     =   '/space/tohekorh/BendAndSlide/files/%s/BFGS_init=%i.traj' %('rebo+KC',N)
-        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i.traj' %('rebo+KC',N)
-        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i.log' %('rebo+KC', N)
+        cont        = ''
+        if len(args) == 1:
+            cont        =   '_' + args[0]
+        mdrelax     =   '/space/tohekorh/BendAndSlide/files/%s/BFGS_init=%i%s.traj' %('rebo+KC',N, cont)
+        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i%s.traj' %('rebo+KC',N, cont)
+        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i%s.log' %('rebo+KC', N, cont)
         return mdfile, mdlogfile, mdrelax
     
     else:
