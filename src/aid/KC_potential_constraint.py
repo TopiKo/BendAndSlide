@@ -7,10 +7,10 @@ Created on 11.11.2014
 import numpy as np
 from help2 import extend_structure, nrst_neigh, map_seq, map_rj, local_normal, which_layer #, map_rjs
 from aid.help import find_layers
-from math import sqrt
-from numpy import zeros, exp, dot
+#from math import sqrt
+from numpy import zeros, exp, dot, sqrt
 import scipy
-import time
+#import time
 
 
 def gradN(ri, ind_bot, positions, pbc, cell, layer_neighbors, take_t = False):
@@ -127,17 +127,33 @@ def get_potential_ij(ri, rj, ni, nj, positions, i, j, params, \
             
             if r < cutoff:
                 
-                rijDotni    =   rij[0]*ni[0] + rij[1]*ni[1] + rij[2]*ni[2]
-                rijDotnj    =   rij[0]*nj[0] + rij[1]*nj[1] + rij[2]*nj[2]
                 
-                pij         =   sqrt(r**2 - rijDotni**2)
-                pji         =   sqrt(r**2 - rijDotnj**2)
+                
+                #rijDotni    =   rij[0]*ni[0] + rij[1]*ni[1] + rij[2]*ni[2]
+                #rijDotnj    =   rij[0]*nj[0] + rij[1]*nj[1] + rij[2]*nj[2]
+                
+                niDotrij    =   ni[0]*rij[0] + ni[1]*rij[1] + ni[2]*rij[2] 
+                njDotrij    =   nj[0]*rij[0] + nj[1]*rij[1] + nj[2]*rij[2] 
+                
+                if -1e-12 < r**2 - niDotrij**2 < 0.:
+                    pij     =   0.
+                else:
+                    pij     =   sqrt(r**2 - niDotrij**2)
+                    
+                if -1e-12 < r**2 - njDotrij**2 < 0.:
+                    pji     =   0.
+                else:
+                    pji     =   sqrt(r**2 - njDotrij**2)
+
+                
+                #pij         =   sqrt(r**2 - rijDotni**2)
+                #pji         =   sqrt(r**2 - rijDotnj**2)
         
                 
                 
-                e_KC       +=  exp(-lamna*(r - z0))*(C + f(pij, delta, C0, C2, C4) \
-                                                       + f(pji, delta, C0, C2, C4)) \
-                                                       - A*(r/z0)**(-6.)
+                e_KC       +=   exp(-lamna*(r - z0))*(C + f(pij, delta, C0, C2, C4) \
+                                                        + f(pji, delta, C0, C2, C4)) \
+                                                        - A*(r/z0)**(-6.)
                 
                 #e_KC    +=  E_KC(r, pij, pji)
                 counting =  True
@@ -220,8 +236,15 @@ def get_forces_ij(ri, rj, ni, nj, dni, positions, posits_ext, i, j, params, \
                 niDotrij    =   ni[0]*rij[0] + ni[1]*rij[1] + ni[2]*rij[2] 
                 njDotrij    =   nj[0]*rij[0] + nj[1]*rij[1] + nj[2]*rij[2] 
                 
-                pij         =   sqrt(r**2 - niDotrij**2)
-                pji         =   sqrt(r**2 - njDotrij**2)
+                if -1e-12 < r**2 - niDotrij**2 < 0.:
+                    pij     =   0.
+                else:
+                    pij     =   sqrt(r**2 - niDotrij**2)
+                    
+                if -1e-12 < r**2 - njDotrij**2 < 0.:
+                    pji     =   0.
+                else:
+                    pji     =   sqrt(r**2 - njDotrij**2)
                 
                 F          += - GradV_ij(rij, r, pij, pji, ni, nj, dni, params)
                 #tg2         =   time.time()
@@ -278,9 +301,6 @@ class KC_potential:
     # This is a constraint class to include the registry dependent 
     # interlayer potential to ase. 
     
-    # NOT ABLE TO DO VERY INTENCE BENDING!! The issue related to the direction of the
-    # surface normal is unsolved 
-    
     def __init__(self, params):
         
         posits      =   params['positions']
@@ -321,7 +341,7 @@ class KC_potential:
     
     def adjust_forces(self, posits, forces):
         
-        tt1             =   time.time()
+        #tt1             =   time.time()
         calcet          =   zeros((len(posits), len(posits)))
         
         

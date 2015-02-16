@@ -76,6 +76,15 @@ def get_ind(positions, ind, *args):
             
         return arend
     
+    elif ind == 'left':
+        r   =   positions
+        left_ind    = []
+        nl, bond    = args[0], args[1]
+        left        = r[:,0] < r[:,0].min() + nl*bond + .1
+        for i in range(len(left)):
+            if left[i]: left_ind.append(i)
+        return left_ind 
+    
     elif ind == 'weak_rend': 
         
         chem_symb   =   args[0]
@@ -130,10 +139,14 @@ def strip(arr, strip_arr):
     new_arr = []
     for val in arr:
         if len(strip_arr) != 0:
+            dont_add    =   False
             for nthis in strip_arr:
-                if val != nthis and val not in new_arr: new_arr.append(val) 
-        else:
+                if val == nthis: 
+                    dont_add = True
+        if not dont_add:
             new_arr.append(val)
+        #else:
+        #    new_arr.append(val)
     return new_arr
 
 def take_inds(arr, inds, inverse = False):
