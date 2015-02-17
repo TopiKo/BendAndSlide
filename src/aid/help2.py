@@ -4,7 +4,7 @@ Created on 28.10.2014
 @author: tohekorh
 '''
 import numpy as np
-from math import sqrt
+from numpy import sqrt
 from aid.help import find_layers
 
 def extend_structure(posits, pbc, cell):

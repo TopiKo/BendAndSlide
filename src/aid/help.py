@@ -12,8 +12,8 @@ from scipy.optimize import fmin_l_bfgs_b #, fmin, minimize
 import sys
 
 def saveAndPrint(atoms, traj = None, print_dat = False):    
-    epot = atoms.get_potential_energy()/len(atoms)
-    ekin = atoms.get_kinetic_energy()/len(atoms)
+    epot = atoms.get_potential_energy() #/len(atoms)
+    ekin = atoms.get_kinetic_energy()   #/len(atoms)
     save_atoms  = get_save_atoms(atoms)
     if traj != None: traj.write(save_atoms)
     if print_dat:
@@ -33,17 +33,28 @@ def get_save_atoms(atoms):
     new_atoms.set_pbc((pbc[0], pbc[1], pbc[2]))   
     return new_atoms    
 
-def passivate_right(atoms, ind):
+def passivate(atoms, ind):
+
+    from moldy.atom_groups import get_ind
     
     if ind == 'rend':
         ch_bond = 1.1
-        from moldy.atom_groups import get_ind
         rend_ind    = get_ind(atoms.positions.copy(), 'hrend')
         h_posits    = atoms.positions[rend_ind].copy()
         h_posits[:,0] += ch_bond
         for posit in h_posits:
             atoms += Atom('H', position = posit)
         return atoms
+
+    if ind == 'lend':
+        ch_bond = 1.1
+        lend_ind    = get_ind(atoms.positions.copy(), 'hlend')
+        h_posits    = atoms.positions[lend_ind].copy()
+        h_posits[:,0] -= ch_bond
+        for posit in h_posits:
+            atoms += Atom('H', position = posit)
+        return atoms
+
         
 def remove_atoms_from_bot_right_end(atoms, fix_top, rm_ind):
     
@@ -101,17 +112,29 @@ def make_atoms_file(atoms, address, inds_dict):
     return group_symbs, group_string
     
 
-def make_graphene_slab(a,h,width,length,N, pbc= (False, True, False), passivate = False):
+def make_graphene_slab(a,h,x1,x2,N, \
+                       edge_type = 'armchair', h_pass = False):
     
     
     # make ML graphene slab
-    atoms = Graphite('C',latticeconstant=(a,2*h),size=(width,length,N) )
+    if edge_type == 'arm':
+        width   =   x1
+        length  =   x2
+        pbc     =   (False, True, False)
+    elif edge_type == 'zz':
+        width   =   x2
+        length  =   x1*2
+        pbc     =   (True, False, False)
+    else:
+        raise
+    atoms       =   Graphite('C',latticeconstant=(a,2*h),size=(width,length,N) )
     
-    l1,l2,l3 = atoms.get_cell().diagonal()
+    l1,l2,l3    =   atoms.get_cell().diagonal()
     atoms.set_cell(atoms.get_cell().diagonal())
     atoms.set_scaled_positions(atoms.get_scaled_positions())
-    atoms.rotate('z',pi/2)
     
+    
+    atoms.rotate('z',pi/2)
      
     z = atoms.get_positions()[:,2]
     del atoms[ list(arange(len(z))[z>z.min()+(N-1)*h+h/2]) ]    
@@ -123,19 +146,31 @@ def make_graphene_slab(a,h,width,length,N, pbc= (False, True, False), passivate 
     atoms.set_scaled_positions( atoms.get_scaled_positions() )
     atoms.set_pbc(pbc)
     
-    W = atoms.get_cell().diagonal()[1]
-    H = (N-1)*h
-    L = atoms.get_positions()[:,0].ptp()/2
     
-    if not pbc[0]:
+    if edge_type == 'arm':
+        W   =   atoms.get_cell().diagonal()[1]
+        H   =   (N-1)*h
+        L   =   atoms.get_positions()[:,0].ptp()/2
         atoms.center(vacuum=L,axis=0)
+
+    elif edge_type == 'zz':
+        atoms.rotate('z', pi/2)
+        atoms.set_cell( (l1,l2,l3) )
+        atoms.center()
         
+        W   =   atoms.get_cell().diagonal()[1]
+        H   =   (N-1)*h
+        L   =   atoms.get_positions()[:,0].ptp()/2
+        atoms.center(vacuum=L,axis=0)
+    
     atoms.center(vacuum=L,axis=2)
     print 'structure ready'
     
-    if passivate:
+    if h_pass:
         
-        atoms = passivate_right(atoms, 'rend')
+        atoms = passivate(atoms, 'rend')
+        atoms = passivate(atoms, 'lend')
+
         #ch_bond = 1.1
         #from moldy.atom_groups import get_ind
         #rend_ind    = get_ind(atoms.positions.copy(), 'hrend')
@@ -287,17 +322,39 @@ def get_fileName(N, indent, *args):
         epsCC       =   args[1]
         cont        =   args[2]
         
-        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f%s.traj' %(potential,N, epsCC, cont)
-        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i_epsCC=%.2f%s.log' %(potential, N, epsCC, cont)
+        path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %potential
+        
+        mdfile      =   path_f + 'md_N=%i_epsCC=%.2f%s.traj'    %(N, epsCC, cont)
+        mdlogfile   =   path_f + 'md_N=%i_epsCC=%.2f%s.log'     %(N, epsCC, cont)
         return mdfile, mdlogfile
+    
     if indent == 'tear_E_rebo+KC':
         cont        = ''
         if len(args) == 1:
             cont        =   '_' + args[0]
-        mdrelax     =   '/space/tohekorh/BendAndSlide/files/%s/BFGS_init=%i%s.traj' %('rebo+KC',N, cont)
-        mdfile      =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i%s.traj' %('rebo+KC',N, cont)
-        mdlogfile   =   '/space/tohekorh/BendAndSlide/files/%s/md_N=%i%s.log' %('rebo+KC', N, cont)
+    
+        path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')
+    
+        mdrelax     =   path_f + 'BFGS_init=%i%s.traj'  %(N, cont)
+        mdfile      =   path_f + 'md_N=%i%s.traj'       %(N, cont)
+        mdlogfile   =   path_f + 'md_N=%i%s.log'        %(N, cont)
         return mdfile, mdlogfile, mdrelax
+    
+    if indent == 'tear_E_rebo+KC_v':
+        cont        = ''
+        v           =   args[0]
+        edge        =   '_' + args[1]
+
+        if len(args) == 3:
+            cont    =   '_' + args[2]
+           
+        path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')   
+         
+        mdrelax     =   path_f + 'BFGS_init=%i_v=%.2f%s%s.traj'  %(N, v, edge, cont)
+        mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
+        mdlogfile   =   path_f + 'md_N=%i_v=%.2f%s%s.log'        %(N, v, edge, cont)
+        return mdfile, mdlogfile, mdrelax
+    
     
     else:
         raise

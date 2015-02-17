@@ -60,8 +60,8 @@ def get_ind(positions, ind, *args):
         return hs
     
     elif ind == 'hrend':
-        zset, lay_ind   =   find_layers(positions.copy())
-        arend           =   [i for i in range(len(zset))]
+        lay_ind   =   find_layers(positions.copy())[1]
+        arend           =   [] #[i for i in range(len(zset))]
         
         
         for i, inds in enumerate(lay_ind):
@@ -71,10 +71,36 @@ def get_ind(positions, ind, *args):
                 if r[0] > r0max: 
                     r0max = r[0]
                     ind_m = inds[j] 
-            if ind_m != None: arend[i] = ind_m
+            if ind_m != None: 
+                #arend[i] = ind_m
+                for k in inds:
+                    if r0max - np.sqrt(3)/4 < positions[k, 0]:
+                        arend.append(k) 
             else: raise
             
         return arend
+    
+    elif ind == 'hlend':
+        lay_ind   =   find_layers(positions.copy())[1]
+        arend     =   [] #[i for i in range(len(zset))]
+        
+        
+        for i, inds in enumerate(lay_ind):
+            r0max   = 1e10
+            ind_m   = None
+            for j, r in enumerate(positions[inds]):        
+                if r[0] < r0max: 
+                    r0max = r[0]
+                    ind_m = inds[j] 
+            if ind_m != None: 
+                #arend[i] = ind_m
+                for k in inds:
+                    if positions[k, 0] < r0max + np.sqrt(3)/4:
+                        arend.append(k) 
+            else: raise
+            
+        return arend
+    
     
     elif ind == 'left':
         r   =   positions

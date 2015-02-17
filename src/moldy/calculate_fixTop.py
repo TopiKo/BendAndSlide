@@ -1,9 +1,8 @@
 '''
-Created on 27.1.2015
+Created on 24.9.2014
 
 @author: tohekorh
 '''
-
 # This class creates the deforming structure.
 # *************************************
 
@@ -12,26 +11,26 @@ from ase import units
 import numpy as np
 from ase.constraints import FixAtoms, FixedPlane
 from ase.calculators.lammpsrun import LAMMPS
+from ase.optimize import BFGS
 from ase.io.trajectory import PickleTrajectory
-from aid.help import saveAndPrint, get_fileName
+from aid.help import make_graphene_slab, saveAndPrint, get_fileName
 from atom_groups import get_ind
 from ase.md.langevin import Langevin
-#from aid.my_constraint import add_adhesion, KC_potential
 from aid.KC_potential_constraint import KC_potential
-from aid.LJ_potential_constraint import add_adhesion
 from ase.visualize import view 
 import sys
 
-N, v, M, edge, release   =   int(sys.argv[1]), float(sys.argv[2]), \
-                                int(sys.argv[3]), sys.argv[4], sys.argv[5] 
+N, v, M, edge   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
 
-#N, v, M, edge, release   =   3, 1., 1000, 'arm', True
+#N, v, M, edge   =   3, 1.,  1000, 'arm'
 
 # fixed parameters
 bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
 h           =   3.38 
 dt          =   2               # units: fs
+length      =   4*1 #8 #16            # slab length has to be integer*2
+width       =   1               # slab width
 fixtop      =   2               #
 
 # SIMULATION PARAMS
@@ -40,26 +39,22 @@ dz          =   dt*v/1000.      # d/M
 
 T           =   0.              # temperature
 interval    =   10              # interval for writing stuff down
+    
 
 
 def run_moldy(N, save = False):
     
-    if release:
-        cont_type = 'cont_release'
-    elif not release:
-        cont_type = 'cont_bend'
-
-    
-    print release    
-    params              =   {'bond':bond, 'a':a, 'h':h}
+    # 
+    params      =   {'bond':bond, 'a':a, 'h':h}
     
     # DEFINE FILES
-    mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge)[0]  
-    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge, cont_type)[:2]    
-
+    mdfile, mdlogfile, mdrelax = get_fileName(N, 'tear_E_rebo+KC_v', v, edge)  
+    
+    print mdfile 
+    
     # GRAPHENE SLAB
-    traj        =   PickleTrajectory(mdfile_read, 'r')
-    atoms       =   traj[0]
+    atoms               =   make_graphene_slab(a,h,width,length,N, \
+                                               edge_type = edge, h_pass = True)[3]
     
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
@@ -74,8 +69,6 @@ def run_moldy(N, save = False):
     top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
     rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop)
     
-    # use initial atoms to obtain fixes
-    atoms       =   traj[-1]
     
     fix_left    =   FixAtoms(indices = left)
     fix_top     =   FixAtoms(indices = top)
@@ -83,10 +76,9 @@ def run_moldy(N, save = False):
     add_kc      =   KC_potential(params)
 
     
-    if not release:
-        for ind in rend:
-            fix_deform  =   FixedPlane(ind, (0., 0., 1.))
-            constraints.append(fix_deform)
+    for ind in rend:
+        fix_deform  =   FixedPlane(ind, (0., 0., 1.))
+        constraints.append(fix_deform)
     
     constraints.append(fix_left)
     constraints.append(fix_top)
@@ -101,43 +93,42 @@ def run_moldy(N, save = False):
                   'boundary'  :'f p f'}
     
     calc    =   LAMMPS(parameters=parameters) 
-    
     atoms.set_calculator(calc)
     # END CALCULATOR
     
-    
+    view(atoms)
     
     # TRAJECTORY
     if save:    traj    =   PickleTrajectory(mdfile, 'w', atoms)
     else:       traj    =   None
     
-    #view(atoms)
+    #data    =   np.zeros((M/interval, 5))
     
-    # FIX 
+    # RELAX
+    atoms.set_constraint(add_kc)
+    dyn     =   BFGS(atoms, trajectory = mdrelax)
+    dyn.run(fmax=0.05)
+    
+    # FIX AFTER RELAXATION
     atoms.set_constraint(constraints)
     
     # DYNAMICS
     dyn     =   Langevin(atoms, dt*units.fs, T*units.kB, 0.002)
     n       =   0
-    
-    header  =   '#t [fs], d [Angstrom], epot_tot [eV], ekin_tot [eV] \n'
+    header  =   '#t [fs], d [Angstrom], epot_tot [eV], ekin_tot [eV], etot_tot [eV] \n'
     log_f   =   open(mdlogfile, 'w')
     log_f.write(header)            
     log_f.close()
-    
+
     print 'Start the dynamics for N = %i' %N
     
-    
-    
     for i in range(0, M):
-        if not release:
-            for ind in rend:
-                atoms[ind].position[2] -= dz 
-        
+        for ind in rend:
+            atoms[ind].position[2] -= dz 
         dyn.run(1)
         
         if i%interval == 0:
-            
+
             epot, ekin  =   saveAndPrint(atoms, traj, False)[:2]
             data        =   [i*dt, i*dz, epot, ekin, epot + ekin]
             
@@ -156,10 +147,11 @@ def run_moldy(N, save = False):
                   
 
             n += 1
-    
+        
         if 1e2 <= M:    
             if i%(int(M/100)) == 0: print 'ready = %.1f' %(i/(int(M/100))) + '%' 
+    
 
 
-run_moldy(N, True)
+run_moldy(N, True)   
     
