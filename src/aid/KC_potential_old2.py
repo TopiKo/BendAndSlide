@@ -166,42 +166,31 @@ def get_potential_ij(ri, rj, ni, nj, positions, i, j, params, \
         return e_KC, None
 
 def grad_pot_ij(posits, i, j, params, \
-                pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop = True):                                
+                pbc, cell, cutoff, n, map_seqs, layer_neighbors):                                
     
-    if jtop:
-        njfac   =  -1
-        nifac   =   1
-    else:
-        njfac   =   1
-        nifac   =  -1
-
     def e(rik, *args):
         k               =   args[0]
-        nifac, njfac    =   args[1]
         posits_use      =   posits.copy()   
         posits_use[i,k] =   rik
         rj              =   posits_use[j]
         ri              =   posits_use[i]
         posits_ext      =   extend_structure(posits_use, pbc, cell)
 
-        ni          =   local_normal(i, posits_ext, layer_neighbors)*nifac
-        nj          =   local_normal(j, posits_ext, layer_neighbors)*njfac
-        
-        
+        ni          =   local_normal(i, posits_ext, layer_neighbors)
+        nj          =   local_normal(j, posits_ext, layer_neighbors)
         
         return get_potential_ij(ri, rj, ni, nj, posits_use, i, j, params, \
                                      pbc, cell, cutoff, n, map_seqs)[0]
              
         
     de          =   zeros(3)
-    
     for k in range(3):
-        de[k]   =   scipy.misc.derivative(e, posits[i,k], dx=1e-6, n=1, args=[k, [nifac, njfac]], order = 3)    
-        
+        de[k]   =   scipy.misc.derivative(e, posits[i,k], dx=1e-6, n=1, args=[k], order = 3)    
+    
     return de
 
 def get_forces_ij(ri, rj, ni, nj, dni, positions, posits_ext, i, j, params, \
-                      pbc, cell, cutoff, n, map_seqs, layer_neighbors = None, jtop = False):
+                      pbc, cell, cutoff, n, map_seqs, layer_neighbors = None):
         
     # This module gives atoms j and all its 
     # images force on atom i provided that rij < cutoff.
@@ -269,15 +258,15 @@ def get_forces_ij(ri, rj, ni, nj, dni, positions, posits_ext, i, j, params, \
     # test that the force is -grad Vij. Very expensive!
     if layer_neighbors != None:
         f = -grad_pot_ij(positions.copy(), i, j, params, \
-                              pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)
+                              pbc, cell, cutoff, n, map_seqs, layer_neighbors)
         print 'forces from all images of %i to %i' %(j,i)
         for ll in range(3):
             print F[ll] - f[ll], F[ll]
             if 1e-6 < np.abs(f[ll]) or 1e-6 < np.abs(F[ll]): 
-                if np.abs(F[ll] - f[ll])/np.abs(F[ll]) > 0.0001:
+                if np.abs(F[ll] - f[ll])/np.abs(F[ll]) > 0.001:
                 #if np.abs(F[ll] - f[ll]) > 1e-6:
                 
-                    print i,j, jtop
+                    print i,j
                     print F
                     print f
                     raise
@@ -291,16 +280,28 @@ def get_forces_ij(ri, rj, ni, nj, dni, positions, posits_ext, i, j, params, \
 
 def get_neigh_layer_indices(layer, layer_indices):
     
-    neigh_ind  =   []
+    neigh_lay   =   []
+    neigh_ind2  =   []
     
     if layer > 0:
-        neigh_ind.append(['bottom', layer_indices[layer - 1]])
+        neigh_lay.append(layer - 1)
+        neigh_ind2.append(['bottom', layer_indices[layer - 1]])
         
     if layer < len(layer_indices) - 1:
-        neigh_ind.append(['top', layer_indices[layer + 1]])
+        #neigh_lay.append(layer + 1)
+        neigh_lay.append(layer - 1)
+        neigh_ind2.append(['top', layer_indices[layer + 1]])
         
         
-    return neigh_ind 
+    neigh_ind   =   []
+    
+    
+    for j in neigh_lay:
+        for k in layer_indices[j]:
+            neigh_ind.append(k)
+
+    print layer,  neigh_lay, neigh_ind, neigh_ind2
+    return neigh_ind, neigh_ind2 
    
 class KC_potential:
     
@@ -337,9 +338,11 @@ class KC_potential:
         self.layer_indices      =   find_layers(posits)[1]
         
         self.neighbor_layer_inds            =   np.empty(len(self.layer_indices), dtype = 'object')
+        self.neighbor_layer_inds           =   np.empty(len(self.layer_indices), dtype = 'object')
 
         for i in range(len(self.layer_indices)):
-            self.neighbor_layer_inds[i]     =   get_neigh_layer_indices(i, self.layer_indices)         
+            self.neighbor_layer_inds[i], self.neighbor_layer_inds[i]  \
+                                            =   get_neigh_layer_indices(i, self.layer_indices)         
         
          
     def adjust_positions(self, oldpositions, newpositions):
@@ -349,9 +352,9 @@ class KC_potential:
     def adjust_forces(self, posits, forces):
         
         
-        #forces_init      =   forces.copy()
-        
-        #calcet          =   zeros((len(posits), len(posits)))
+        forces_init      =   forces.copy()
+        #tt1             =   time.time()
+        calcet          =   zeros((len(posits), len(posits)))
         
         params          =   self.params
         pbc, cell, cutoff, n, map_seqs   \
@@ -360,8 +363,9 @@ class KC_potential:
         layer_indices   =   self.layer_indices
         layer_neighbors =   self.layer_neighbors
         chem_symbs      =   self.chem_symbs 
-        neighbor_layer_inds2  \
+        neighbor_layer_inds   \
                         =   self.neighbor_layer_inds
+
         dnGreat         =   np.empty(len(forces), dtype = 'object')
         
         for i, r in enumerate(posits):
@@ -371,62 +375,51 @@ class KC_potential:
         
         test_forces = np.empty((len(forces), len(forces)), dtype = 'object')
         
+        #tf = 0
+        #tni = 0       
+        #tnj = 0 
+        #tmt =   0        
+        #tgt =   0        
+        #trt =   0
         for i in range(len(forces)):
             if chem_symbs[i] == 'C':
                 ri              =   posits[i]
-                ni_f            =   local_normal(i, posits_ext, layer_neighbors)
-                dni_f           =   dnGreat[i]
-
-                neigh           =   neighbor_layer_inds2[which_layer(i, layer_indices)[0]]
+                #tni1            =   time.time()
+                ni              =   local_normal(i, posits_ext, layer_neighbors)
+                #tni2            =   time.time()
                 
-                for nset in neigh:
+                #tni            +=   tni2 - tni1
+                neigh_indices   =   neighbor_layer_inds[which_layer(i, layer_indices)[0]]
+                for j in neigh_indices: 
                     
-                    
-                    if nset[0] == 'bottom':
-                        norm_fac    =   1
-                        ni          =   -1*ni_f
-                        dni         =   -dni_f
-                        jtop        =   False
-                    elif nset[0] == 'top':
-                        norm_fac    =   -1   
-                        ni          =   1*ni_f
-                        dni         =   dni_f
-                        jtop        =   True
-                                         
-                    
-        
-                    neigh_indices   =   nset[1]
-                
-                    for j in neigh_indices: 
+                    if chem_symbs[j] == 'C': # calcet[i,j] == 0 and 
+                        rj              =   posits[j]
+                        #tnj1             =   time.time()
+                        nj              =   local_normal(j, posits_ext, layer_neighbors)
+                        #tnj2             =   time.time()
+                        # Force due to atom j on atom i
+                        #tf1             =   time.time()
+                        fij, new_maps   =   get_forces_ij(ri, rj, ni, nj, dnGreat[i], \
+                                                       posits, posits_ext, i, j, params, \
+                                                       pbc, cell, cutoff, n, map_seqs) #,
+                                                       #layer_neighbors = layer_neighbors)
+                        #tf2             =   time.time()
+                        #tf             +=   tf2 - tf1
+                        #tnj            +=   tnj2 - tnj1
+                        #tmt            +=   tm
+                        #tgt            +=   tg
+                        #trt            +=   tr
+                        if new_maps != None:    self.map_seqs   =   new_maps
                         
-                        if chem_symbs[j] == 'C': # calcet[i,j] == 0 and 
-                            rj              =   posits[j]
-                            nj              =   local_normal(j, posits_ext, layer_neighbors)*norm_fac
-                            # Force due to atom j on atom i
-                            
-                            fij, new_maps   =   get_forces_ij(ri, rj, ni, nj, dni, \
-                                                           posits, posits_ext, i, j, params, \
-                                                           pbc, cell, cutoff, n, map_seqs ) #,
-                                                           #layer_neighbors = layer_neighbors, \
-                                                           #jtop = jtop)
-
-                            if new_maps != None:    self.map_seqs   =   new_maps
-                            
-                            
-                            #print i,j, -grad_pot_ij(posits.copy(), i, j, params, \
-                            #                   pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)  
-                            #print 
-                            
-                            test_forces[i,j]    =   np.zeros(3)
-                            test_forces[i,j]    =   fij
-                            
-                            # Force due to i on j SHOULD BE minus force due to j on i
-                            forces[i,:] +=  fij  
-                            #forces[j,:] += -fij  
-                            
-                            #calcet[i,j] = 1
-                            #calcet[j,i] = 1
-        '''                
+                        test_forces[i,j]    =   np.zeros(3)
+                        test_forces[i,j]    =   fij
+                        # Force due to i on j is minus force due to j on i
+                        forces[i,:] +=  fij  
+                        #forces[j,:] += -fij  
+                        
+                        calcet[i,j] = 1
+                        calcet[j,i] = 1
+                        
         for i in range(len(forces)):
             for j in range(len(forces)):
                 if  test_forces[i,j] != None:
@@ -447,12 +440,21 @@ class KC_potential:
                                                        posits, posits_ext, j, i, params, \
                                                        pbc, cell, cutoff, n, map_seqs)[0]
                                     print -grad_pot_ij(posits.copy(), i, j, params, \
-                                                       pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)
+                                                       pbc, cell, cutoff, n, map_seqs, layer_neighbors)
                                     print -grad_pot_ij(posits.copy(), j, i, params, \
-                                                       pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)
-        '''                                
-        
-        #print forces - forces_init
+                                                       pbc, cell, cutoff, n, map_seqs, layer_neighbors)
+                                        
+        #tt2             =   time.time()
+        #tt  =   tt2 - tt1
+
+        #print 'time grad = %.2f' %(tlf/tt*100) + '%'                 
+        #print 'time forc = %.2f' %(tf/tt*100) + '%'                 
+        #print '    time maps = %.2f' %(tmt/tt*100) + '%'                 
+        #print '    time rad  = %.2f' %(trt/tt*100) + '%'                 
+        #print '    time grad = %.2f' %(tgt/tt*100) + '%'                 
+        #print 'time norm = %.2f' %((tni + tnj)/tt*100) + '%'                 
+        #print 'time tot  = %.2fs' %(tt) 
+        print (forces - forces_init)/2.
 
         
     def adjust_potential_energy(self, posits, energy):
@@ -465,8 +467,12 @@ class KC_potential:
         layer_indices   =   self.layer_indices
         layer_neighbors =   self.layer_neighbors
         chem_symbs      =   self.chem_symbs
-        neighbor_layer_inds    =   self.neighbor_layer_inds
+        neighbor_layer_inds     =   self.neighbor_layer_inds
         
+        #et  = 0
+        #tnj =   0
+        #tni =   0
+        #tt1             =   time.time()
         
         for i in range(len(posits)):
             
@@ -479,32 +485,36 @@ class KC_potential:
                 #tni            +=   tni2 - tni1
                 
                 
-                neigh           =   neighbor_layer_inds[which_layer(i, layer_indices)[0]]
+                neigh_indices   =   neighbor_layer_inds[which_layer(i, layer_indices)[0]]
                 
-                
-                for nset in neigh:
+                for j in neigh_indices: 
                     
-                    if nset[0] == 'bottom':
-                        norm_fac    =   1
-                        ni          =   -1*ni
-                    elif nset[0] == 'top':
-                        norm_fac    =   -1                    
-                    
-                    neigh_indices   =   nset[1]
-                     
-                    for j in neigh_indices: 
+                    if calcet[i,j] == 0 and chem_symbs[j] == 'C':
+                        rj          =   posits[j]
                         
-                        if calcet[i,j] == 0 and chem_symbs[j] == 'C':
-                            rj          =   posits[j]
-                            nj          =   local_normal(j, posits_ext, layer_neighbors)*norm_fac
-                            
-                            e, new_maps =   get_potential_ij(ri, rj, ni, nj, posits, i, j, params, \
-                                                             pbc, cell, cutoff, n, map_seqs) 
-                            
-                            e_KC       +=  e
-                            if new_maps != None:    self.map_seqs   =   new_maps
-                            calcet[i,j] =  1
-                            calcet[j,i] =  1
+                        
+                        #tnj1        =   time.time()
+                        nj          =   local_normal(j, posits_ext, layer_neighbors)
+                        #tnj2        =   time.time()
+                        
+                        #et1         =   time.time()
+                        e, new_maps =   get_potential_ij(ri, rj, ni, nj, posits, i, j, params, \
+                                                         pbc, cell, cutoff, n, map_seqs) 
+                        #et2         =   time.time()
+                        
+                        #et         +=   et2 - et1
+                        #tnj        +=   tnj2 - tnj1
+                        
+                        e_KC       +=  e
+                        if new_maps != None:    self.map_seqs   =   new_maps
+                        calcet[i,j] =  1
+                        calcet[j,i] =  1
         
+        #tt2             =   time.time()
+        #tt              =   tt2 - tt1
+        #print 'time e = %.2f' %(et/tt*100) + '%'                 
+        #print 'time n = %.2f' %((tnj + tni)/tt*100) + '%'                 
+        #print 'time tot, e = %.2fs' %tt     
+        print e_KC
         return e_KC
     

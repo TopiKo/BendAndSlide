@@ -211,13 +211,20 @@ def local_normal(i, posits_ext, layer_neighbors):
         n1[2]   =   tang_vec[0,0]*tang_vec[1,1] - tang_vec[0,1]*tang_vec[1,0]
 
         n1      =   n1/sqrt(n1[0]**2 + n1[1]**2 + n1[2]**2)
-
+        
+        if n1[2] < 0:
+            n1  =   -n1
+        
         n2      =   np.zeros(3) # = tang_vec[2] x tang_vec[0]
         n2[0]   =   tang_vec[2,1]*tang_vec[0,2] - tang_vec[2,2]*tang_vec[0,1]
         n2[1]   = -(tang_vec[2,0]*tang_vec[0,2] - tang_vec[2,2]*tang_vec[0,0])
         n2[2]   =   tang_vec[2,0]*tang_vec[0,1] - tang_vec[2,1]*tang_vec[0,0]
 
         n2      =   n2/sqrt(n2[0]**2 + n2[1]**2 + n2[2]**2)
+        
+        if n2[2] < 0:
+            n2  =   -n2
+
 
         n3      =   np.zeros(3) # = tang_vec[1] x tang_vec[2]
         n3[0]   =   tang_vec[1,1]*tang_vec[2,2] - tang_vec[1,2]*tang_vec[2,1]
@@ -225,7 +232,12 @@ def local_normal(i, posits_ext, layer_neighbors):
         n3[2]   =   tang_vec[1,0]*tang_vec[2,1] - tang_vec[1,1]*tang_vec[2,0]
 
         n3      =   n3/sqrt(n3[0]**2 + n3[1]**2 + n3[2]**2)
- 
+
+        if n3[2] < 0:
+            n3  =   -n3
+
+        
+        
         normal  =   n1 + n2 + n3
         normal  =   normal/sqrt(normal[0]**2 + normal[1]**2 + normal[2]**2)
                 
@@ -241,7 +253,10 @@ def local_normal(i, posits_ext, layer_neighbors):
         n1[2]   =   tang_vec[0,0]*tang_vec[1,1] - tang_vec[0,1]*tang_vec[1,0]
 
         normal  =   n1/sqrt(n1[0]**2 + n1[1]**2 + n1[2]**2)
-                
+
+        if normal[2] < 0:
+            normal  =   -normal
+        
         return normal
         
     else:

@@ -16,7 +16,8 @@ from ase.visualize import view
 
 from moldy.atom_groups import get_mask
 from LJ_potential_constraint import LJ_potential
-from KC_potential_constraint_new import KC_potential
+from KC_potential_constraint import KC_potential
+#from KC_potential_old2 import KC_potential
 #from aid.help import find_layers
 from help import make_graphene_slab, get_save_atoms, find_layers
 import time
@@ -226,8 +227,16 @@ def corrugationAndAdhesion(params):
     CperArea    =   (a**2*np.sqrt(3)/4)**(-1)
     
     # Initial atoms graphite:
-    atoms_init              =   make_graphene_slab(a,h,width,length,N, (True, True, False))[3]
-
+    #atoms_init              =   make_graphene_slab(a,h,width,length,N, (True, True, False))[3]
+    atoms_init              =   make_graphene_slab(a,h, width,length, N, \
+                                                   edge_type = 'arm', h_pass = False)[3]
+    
+    
+    atoms_init.set_pbc((True, True, False))
+    atoms_init.set_cell([3*bond, a, 15])
+    atoms_init.center()
+    
+    view(atoms_init)
     # Save something:
     params['positions']     =   atoms_init.positions
     params['cell']          =   atoms_init.get_cell().diagonal()
@@ -288,7 +297,7 @@ def corrugationAndAdhesion(params):
     data_corr   =   {}
     
     # Loop over three different methods:
-    for const_params in constraint_param_sets[:2]: 
+    for const_params in constraint_param_sets: 
         
         # Name for the method:
         indent          =   const_params[0]
@@ -350,7 +359,7 @@ def corrugationAndAdhesion(params):
     
 
 
-params  =   {'bond':bond, 'a':a, 'h':h, 'acc':49, 'width': width, 'length':length}  
+params  =   {'bond':bond, 'a':a, 'h':h, 'acc':13, 'width': width, 'length':length}  
     
 corrugationAndAdhesion(params) 
     

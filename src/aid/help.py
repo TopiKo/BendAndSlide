@@ -113,7 +113,7 @@ def make_atoms_file(atoms, address, inds_dict):
     
 
 def make_graphene_slab(a,h,x1,x2,N, \
-                       edge_type = 'armchair', h_pass = False):
+                       edge_type = 'arm', h_pass = False):
     
     
     # make ML graphene slab
