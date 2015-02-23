@@ -17,10 +17,9 @@ from ase.visualize import view
 from moldy.atom_groups import get_mask
 from LJ_potential_constraint import LJ_potential
 from KC_potential_constraint import KC_potential
-#from KC_potential_old2 import KC_potential
-#from aid.help import find_layers
+from KC_parallel import KC_potential_p
+
 from help import make_graphene_slab, get_save_atoms, find_layers
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -154,6 +153,8 @@ def plot_adhesion():
     ax          =   fig.add_subplot(111)
     datas       =   {'rebo_KC':np.loadtxt(path + 'datas/adhesion_data_rebo_KC.data'),
                      'rebo_KC_iaS':np.loadtxt(path + 'datas/adhesion_data_rebo_KC_iaS.data'),
+                     'rebo_KC_p':np.loadtxt(path + 'datas/adhesion_data_rebo_KC_p.data'),
+                     'rebo_KC_iaS_p':np.loadtxt(path + 'datas/adhesion_data_rebo_KC_iaS_p.data'),
                      'rebo_lj':np.loadtxt(path + 'datas/adhesion_data_rebo_lj.data'),
                      'airebo':np.loadtxt(path + 'datas/adhesion_data_airebo.data')}
     
@@ -178,6 +179,8 @@ def plot_corrugation():
     ax          =   fig.add_subplot(111)
     datas       =   {'rebo_KC':np.loadtxt(path + 'datas/corrugation_data_rebo_KC.data'),
                      'rebo_KC_iaS':np.loadtxt(path + 'datas/corrugation_data_rebo_KC_iaS.data'),
+                     'rebo_KC_p':np.loadtxt(path + 'datas/corrugation_data_rebo_KC_p.data'),
+                     'rebo_KC_iaS_p':np.loadtxt(path + 'datas/corrugation_data_rebo_KC_iaS_p.data'),
                      'rebo_lj':np.loadtxt(path + 'datas/corrugation_data_rebo_lj.data'),
                      'airebo':np.loadtxt(path + 'datas/corrugation_data_airebo.data')}
     
@@ -238,12 +241,12 @@ def corrugationAndAdhesion(params):
     
     view(atoms_init)
     # Save something:
+    params['ncores']        =   4
     params['positions']     =   atoms_init.positions
     params['cell']          =   atoms_init.get_cell().diagonal()
     params['pbc']           =   atoms_init.get_pbc()
     
     # This is the interaction distance in Angstrom:
-    params['ia_dist']       =   14
     params['chemical_symbols']  =   atoms_init.get_chemical_symbols()
     
     # This controls how far the upper layer is pulled:
@@ -258,15 +261,22 @@ def corrugationAndAdhesion(params):
     fix_bot             =   FixAtoms(mask = bottom)
     
     # The constraints for LJ nad KC - potentials:
+    params['ia_dist']       =   14
     add_KC              =   KC_potential(params)
-    params['ia_dist']   =   9.
+    add_KC_p            =   KC_potential_p(params)
+    params['ia_dist']   =   10.
     add_KC_iaS          =   KC_potential(params)
+    add_KC_iaS_p        =   KC_potential_p(params)
+    
     params['ia_dist']   =   14.
     add_LJ              =   LJ_potential(params)
     
     # Different constraint sets for different calculations:
     constraint_fb_kc_e  =   [fix_bot, add_KC]
     constraint_fb_kc_e_iaS  =   [fix_bot, add_KC_iaS]
+    constraint_fb_kc_e_p  =   [fix_bot, add_KC_p]
+    constraint_fb_kc_e_iaS_p  =   [fix_bot, add_KC_iaS_p]
+    
     constraint_fb_lj_e  =   [fix_bot, add_LJ]
     constraint_fb       =   [fix_bot]
     # END FIX
@@ -290,6 +300,8 @@ def corrugationAndAdhesion(params):
     
     constraint_param_sets   = [['rebo_KC', constraint_fb_kc_e, params_rebo],
                                ['rebo_KC_iaS', constraint_fb_kc_e_iaS, params_rebo],
+                               ['rebo_KC_p', constraint_fb_kc_e_p, params_rebo],
+                               ['rebo_KC_iaS_p', constraint_fb_kc_e_iaS_p, params_rebo],
                                ['rebo_lj', constraint_fb_lj_e, params_rebo], 
                                ['airebo',  constraint_fb, params_airebo]] 
     
@@ -359,7 +371,7 @@ def corrugationAndAdhesion(params):
     
 
 
-params  =   {'bond':bond, 'a':a, 'h':h, 'acc':13, 'width': width, 'length':length}  
+params  =   {'bond':bond, 'a':a, 'h':h, 'acc':49, 'width': width, 'length':length}  
     
 corrugationAndAdhesion(params) 
     

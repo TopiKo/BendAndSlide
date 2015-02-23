@@ -322,7 +322,7 @@ class KC_potential_p:
         self.params =   [self.A, self.z0, self.lamna, self.delta, self.C, self.C0, self.C2, self.C4]
         
         #self.threadMaster   =   ThreadMaster(6)
-        self.cores          =   4
+        self.cores          =   max((2, params['ncores']))
         self.n              =   0
         self.map_seqs       =  []
         for i in range(3):

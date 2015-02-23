@@ -17,10 +17,11 @@ from aid.help import make_graphene_slab, saveAndPrint, get_fileName
 from atom_groups import get_ind
 from ase.md.langevin import Langevin
 from aid.KC_potential_constraint import KC_potential
+from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
 import sys
 
-N, v, M, edge   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
+N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
 
 #N, v, M, edge   =   3, 1.,  1000, 'arm'
 
@@ -41,7 +42,6 @@ T           =   0.              # temperature
 interval    =   10              # interval for writing stuff down
     
 
-
 def run_moldy(N, save = False):
     
     # 
@@ -56,6 +56,7 @@ def run_moldy(N, save = False):
     atoms               =   make_graphene_slab(a,h,width,length,N, \
                                                edge_type = edge, h_pass = True)[3]
     
+    params['ncores']    =   ncores
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
     params['cell']      =   atoms.get_cell().diagonal()
@@ -73,7 +74,7 @@ def run_moldy(N, save = False):
     fix_left    =   FixAtoms(indices = left)
     fix_top     =   FixAtoms(indices = top)
     
-    add_kc      =   KC_potential(params)
+    add_kc      =   KC_potential_p(params)
 
     
     for ind in rend:

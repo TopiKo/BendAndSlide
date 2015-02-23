@@ -18,12 +18,12 @@ from atom_groups import get_ind
 from ase.md.langevin import Langevin
 #from aid.my_constraint import add_adhesion, KC_potential
 from aid.KC_potential_constraint import KC_potential
-from aid.LJ_potential_constraint import add_adhesion
+from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
 import sys
 
-N, v, M, edge, release   =   int(sys.argv[1]), float(sys.argv[2]), \
-                                int(sys.argv[3]), sys.argv[4], sys.argv[5] 
+N, v, M, edge, release, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
+                                    int(sys.argv[3]), sys.argv[4], sys.argv[5], int(sys.argv[6]) 
 
 #N, v, M, edge, release   =   3, 1., 1000, 'arm', True
 
@@ -61,6 +61,7 @@ def run_moldy(N, save = False):
     traj        =   PickleTrajectory(mdfile_read, 'r')
     atoms       =   traj[0]
     
+    params['ncores']    =   ncores
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
     params['cell']      =   atoms.get_cell().diagonal()
@@ -80,7 +81,7 @@ def run_moldy(N, save = False):
     fix_left    =   FixAtoms(indices = left)
     fix_top     =   FixAtoms(indices = top)
     
-    add_kc      =   KC_potential(params)
+    add_kc      =   KC_potential_p(params)
 
     
     if not release:
