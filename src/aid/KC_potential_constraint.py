@@ -39,51 +39,46 @@ def gradN(ri, ind_bot, positions, pbc, cell, layer_neighbors, take_t = False):
                     
     return dni    
 
-def GradV_ij(rij, r, pij, pji, ni, nj, dni, params):
+def GradV_ij(rij, r, pij, pji, ni, nj, dni, dnj, params):
     # Tama ulos, omaksi..
     
     # Here we calculate the gradient of the KC- potential to obtain force:
     # See notes, for derivation.    
     A, z0, lamna, delta, C, C0, C2, C4  =   params
     
-    #tg1         =   time.time()
     gpij        =   -2./delta**2*f(pij, delta, C0, C2, C4) + exp(-(pij/delta)**2)* \
                     (2.*C2/delta**2 + 4*C4*pij**2/delta**4)
     gpji        =   -2./delta**2*f(pji, delta, C0, C2, C4) + exp(-(pji/delta)**2)* \
                     (2.*C2/delta**2 + 4*C4*pji**2/delta**4)
-    #tg2         =   time.time()
     
-    #tndotr1     =   time.time()    
     njdotrij    =   nj[0]*rij[0] + nj[1]*rij[1] + nj[2]*rij[2]  # nj.rij
     nidotrij    =   ni[0]*rij[0] + ni[1]*rij[1] + ni[2]*rij[2]  # ni.rij
-    #tndotr2     =   time.time()    
     
-    #tpre1       =   time.time()    
-
     bulkPreFac  =  -lamna*exp(-lamna*(r - z0))*(C + f(pij, delta, C0, C2, C4) + f(pji, delta, C0, C2, C4)) \
                 +   6*A*z0**6/r**7
     expPreFac   =   exp(-lamna*(r - z0))
 
-    #tpre2       =   time.time()      
-    
-    #tdotdn1     =   tpre2                      
     rijDotdni   =   dot(dni, rij)
-    #tdotdn2     =   time.time()
     
-    #tG1         =   tdotdn2
-    GV          =    bulkPreFac*(-rij/r) \
+    # THIS is FIJ =  - GradVij
+    FIJ          =    -(bulkPreFac*(-rij/r) \
                    + expPreFac*gpji*(njdotrij*nj - rij) \
-                   + expPreFac*gpij*(nidotrij*(ni  - rijDotdni) - rij)
-    #tG2         =   time.time()
+                   + expPreFac*gpij*(nidotrij*(ni  - rijDotdni) - rij))
     
+    ###################
+    # THIS TERMS IS CORRECTION BECAUSE IN KC FIJ != FJI, see deriv from notes...
+    rijDotdnj   =   dot(dnj, rij)
+
+    fji_add     =   exp(-lamna*(r - z0))*(gpij*(nidotrij)*rijDotdni + gpji*(njdotrij)*rijDotdnj)
+    #Fij + Fji  =    fij_add
     
-    #print tg2 - tg1, tndotr2 - tndotr1, tpre2 - tpre1, tdotdn2 - tdotdn1, tG2 - tG1 
+    ###################
     
-    return GV
+    return FIJ, fji_add - FIJ
 
 def f(p, delta, C0, C2, C4):
-    #A, z0, lamna, delta, C, C0, C2, C4 =   params
     
+    #A, z0, lamna, delta, C, C0, C2, C4 =   params
     return np.exp(-(p/delta)**2)*(C0 \
                  +  C2*(p/delta)**2  \
                  +  C4*(p/delta)**4)
@@ -96,17 +91,6 @@ def get_potential_ij(ri, rj, ni, nj, positions, i, j, params, \
     
     e_KC            =   0.
 
-    
-    #def E_KC(r, pij, pji, *args):
-        
-        #r   =   np.linalg.norm(rij)
-        #pij =   sqrt(r**2 - dot(rij, ni)**2)
-        #pji =   sqrt(r**2 - dot(rij, nj)**2)
-        
-    #    return exp(-lamna*(r - z0))*(C + f(pij, delta, C0, C2, C4) + f(pji, delta, C0, C2, C4)) - A*(r/z0)**(-6.)
-
-    
-    
     m           =   0
     counting    =   True
     update_maps     =   False
@@ -127,11 +111,6 @@ def get_potential_ij(ri, rj, ni, nj, positions, i, j, params, \
             
             if r < cutoff:
                 
-                
-                
-                #rijDotni    =   rij[0]*ni[0] + rij[1]*ni[1] + rij[2]*ni[2]
-                #rijDotnj    =   rij[0]*nj[0] + rij[1]*nj[1] + rij[2]*nj[2]
-                
                 niDotrij    =   ni[0]*rij[0] + ni[1]*rij[1] + ni[2]*rij[2] 
                 njDotrij    =   nj[0]*rij[0] + nj[1]*rij[1] + nj[2]*rij[2] 
                 
@@ -145,17 +124,10 @@ def get_potential_ij(ri, rj, ni, nj, positions, i, j, params, \
                 else:
                     pji     =   sqrt(r**2 - njDotrij**2)
 
-                
-                #pij         =   sqrt(r**2 - rijDotni**2)
-                #pji         =   sqrt(r**2 - rijDotnj**2)
-        
-                
-                
                 e_KC       +=   exp(-lamna*(r - z0))*(C + f(pij, delta, C0, C2, C4) \
                                                         + f(pji, delta, C0, C2, C4)) \
                                                         - A*(r/z0)**(-6.)
                 
-                #e_KC    +=  E_KC(r, pij, pji)
                 counting =  True
                 
         m      +=   1
@@ -200,50 +172,37 @@ def grad_pot_ij(posits, i, j, params, \
         
     return de
 
-def get_forces_ij(ri, rj, ni, nj, dni, positions, posits_ext, i, j, params, \
+def get_forces_ij(ri, rj, ni, nj, dni, dnj, positions, posits_ext, i, j, params, \
                       pbc, cell, cutoff, n, map_seqs, layer_neighbors = None, jtop = False):
         
     # This module gives atoms j and all its 
     # images force on atom i provided that rij < cutoff.
      
-    F               =   zeros(3)
+    Fij             =   zeros(3)
+    
+    Fji             =   zeros(3)
     
     # m counts the amount of translations Tx**n1 Ty**n2 rj = image_rj, n1 + n2 = m.
     m               =   0
     counting        =   True
     update_maps     =   False
     
-    #tm = 0
-    #tg = 0
-    #tr = 0
-    
     while counting:
         counting    =   False
-        
-        #tm1         =   time.time()
         
         if len(map_seqs) < m + 1:
             update_maps     =   True
             map_seqs.append(map_seq(m, n))
         
         rj_im       =   map_rj(rj, map_seqs[m], pbc, cell)
-        #tm2         =   time.time()
-        
-        #tm         +=   tm2 - tm1
               
         for mrj in rj_im:
-            #tr1     =   time.time()
-        
             rij     =   mrj - ri
             r       =   sqrt(rij[0]**2 + rij[1]**2 + rij[2]**2) 
-            #tr2     =   time.time()
-            
-            #tr     +=  tr2 - tr1
+    
             if r < cutoff:
                 
                 # See notes:
-                #tg1         =   time.time()
-                
                 niDotrij    =   ni[0]*rij[0] + ni[1]*rij[1] + ni[2]*rij[2] 
                 njDotrij    =   nj[0]*rij[0] + nj[1]*rij[1] + nj[2]*rij[2] 
                 
@@ -257,36 +216,52 @@ def get_forces_ij(ri, rj, ni, nj, dni, positions, posits_ext, i, j, params, \
                 else:
                     pji     =   sqrt(r**2 - njDotrij**2)
                 
-                F          += - GradV_ij(rij, r, pij, pji, ni, nj, dni, params)
-                #tg2         =   time.time()
+                F1, F2      =   GradV_ij(rij, r, pij, pji, ni, nj, dni, dnj, params)
+                Fij        +=   F1
+                Fji        +=   F2 
                 
-                #  tg         +=   tg2 - tg1             
                 counting    =   True
         
         m      +=   1     
     
-    
     # test that the force is -grad Vij. Very expensive!
     if layer_neighbors != None:
-        f = -grad_pot_ij(positions.copy(), i, j, params, \
+        
+        fij = -grad_pot_ij(positions.copy(), i, j, params, \
                               pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)
+        fji= -grad_pot_ij(positions.copy(), j, i, params, \
+                              pbc, cell, cutoff, n, map_seqs, layer_neighbors, not jtop)
+
         print 'forces from all images of %i to %i' %(j,i)
         for ll in range(3):
-            print F[ll] - f[ll], F[ll]
-            if 1e-6 < np.abs(f[ll]) or 1e-6 < np.abs(F[ll]): 
-                if np.abs(F[ll] - f[ll])/np.abs(F[ll]) > 0.0001:
+            print Fij[ll] - fij[ll], Fij[ll]
+            if 1e-6 < np.abs(fij[ll]) or 1e-6 < np.abs(Fij[ll]): 
+                if np.abs(Fij[ll] - fij[ll]) > 1e-6:
                 #if np.abs(F[ll] - f[ll]) > 1e-6:
                 
                     print i,j, jtop
-                    print F
+                    print Fij
+                    print f
+                    raise
+        
+        print 'forces from all images of %i to %i' %(i,j)
+        for ll in range(3):
+            print Fji[ll] - fji[ll], Fji[ll]
+            if 1e-6 < np.abs(fji[ll]) or 1e-6 < np.abs(Fji[ll]): 
+                if np.abs(Fji[ll] - fji[ll]) > 1e-6:
+                #if np.abs(F[ll] - f[ll]) > 1e-6:
+                
+                    print i,j, jtop
+                    print Fij
                     print f
                     raise
         print 
+        
     
     if update_maps:
-        return F, map_seqs #, tm, tg, tr
+        return Fij, Fji, map_seqs #, tm, tg, tr
     else:
-        return F, None #, tm, tg, tr
+        return Fij, Fji, None #, tm, tg, tr
 
 
 def get_neigh_layer_indices(layer, layer_indices):
@@ -351,7 +326,7 @@ class KC_potential:
         
         #forces_init      =   forces.copy()
         
-        #calcet          =   zeros((len(posits), len(posits)))
+        calcet          =   zeros((len(posits), len(posits)))
         
         params          =   self.params
         pbc, cell, cutoff, n, map_seqs   \
@@ -399,34 +374,31 @@ class KC_potential:
                 
                     for j in neigh_indices: 
                         
-                        if chem_symbs[j] == 'C': # calcet[i,j] == 0 and 
+                        if chem_symbs[j] == 'C' and calcet[i,j] == 0: 
                             rj              =   posits[j]
                             nj              =   local_normal(j, posits_ext, layer_neighbors)*norm_fac
                             # Force due to atom j on atom i
                             
-                            fij, new_maps   =   get_forces_ij(ri, rj, ni, nj, dni, \
+                            dnj             =   dnGreat[j]*norm_fac
+                            
+                            
+                            fij, fji, new_maps   =   get_forces_ij(ri, rj, ni, nj, dni, dnj, \
                                                            posits, posits_ext, i, j, params, \
-                                                           pbc, cell, cutoff, n, map_seqs ) #,
+                                                           pbc, cell, cutoff, n, map_seqs) #,
                                                            #layer_neighbors = layer_neighbors, \
                                                            #jtop = jtop)
 
                             if new_maps != None:    self.map_seqs   =   new_maps
                             
-                            
-                            #print i,j, -grad_pot_ij(posits.copy(), i, j, params, \
-                            #                   pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)  
-                            #print 
-                            
                             test_forces[i,j]    =   np.zeros(3)
                             test_forces[i,j]    =   fij
                             
-                            # Force due to i on j SHOULD BE minus force due to j on i
                             forces[i,:] +=  fij  
-                            #forces[j,:] += -fij  
+                            forces[j,:] +=  fji  
                             
-                            #calcet[i,j] = 1
-                            #calcet[j,i] = 1
-        '''                
+                            calcet[i,j] = 1
+                            calcet[j,i] = 1
+        '''                    
         for i in range(len(forces)):
             for j in range(len(forces)):
                 if  test_forces[i,j] != None:
@@ -450,8 +422,7 @@ class KC_potential:
                                                        pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)
                                     print -grad_pot_ij(posits.copy(), j, i, params, \
                                                        pbc, cell, cutoff, n, map_seqs, layer_neighbors, jtop)
-        '''                                
-        
+        '''
         #print forces - forces_init
 
         

@@ -202,6 +202,7 @@ def get_forces_ij(ri, rj, ni, nj, dni, dnj, positions, posits_ext, i, j, params,
         
     # This module gives atoms j and all its 
     # images force on atom i provided that rij < cutoff.
+    
     Fij             =   zeros(3)
     Fji             =   zeros(3)
     
@@ -241,8 +242,6 @@ def get_forces_ij(ri, rj, ni, nj, dni, dnj, positions, posits_ext, i, j, params,
                     pji     =   0.
                 else:
                     pji     =   sqrt(r**2 - njDotrij**2)
-                
-                #F          += - GradV_ij(rij, r, pij, pji, ni, nj, dni, params)
                 
                 F1, F2      =   GradV_ij(rij, r, pij, pji, ni, nj, dni, dnj, params)
                 Fij        +=   F1
@@ -314,6 +313,8 @@ class KC_potential_p:
     
     # This is a constraint class to include the registry dependent 
     # interlayer potential to ase. 
+    
+    # Good but slow
     
     def __init__(self, params):
         
@@ -438,24 +439,16 @@ class KC_potential_p:
 
         
         jobs        =   []
-        
         af1         =   multiprocessing.Array('d', np.zeros(len(forces)))
         af2         =   multiprocessing.Array('d', np.zeros(len(forces)))
         af3         =   multiprocessing.Array('d', np.zeros(len(forces)))
         
-        afj1        =   multiprocessing.Array('d', np.zeros(len(forces)))
-        afj2        =   multiprocessing.Array('d', np.zeros(len(forces)))
-        afj3        =   multiprocessing.Array('d', np.zeros(len(forces)))
-        
-        calcet      =   multiprocessing.Array('i', array.array('i', (0 for i in range(0,len(posits)**2))))
-        
         for k, pos_arr in enumerate(split_posits):
             
-            
-            args        =   (split_arr[k], pos_arr,  af1, af2, af3, afj1, afj2, afj3, dnGreat,\
+            args        =   (split_arr[k], pos_arr,  af1, af2, af3, dnGreat,\
                              posits, pbc, cell, layer_neighbors, \
                              chem_symbs, posits_ext, neighbor_layer_inds2, \
-                             layer_indices, params, cutoff, n, map_seqs, calcet, len(forces))
+                             layer_indices, params, cutoff, n, map_seqs)
             
             process     =   multiprocessing.Process(target=self.forces_on_posArr, 
                                                     args=args)
@@ -469,12 +462,9 @@ class KC_potential_p:
         for j in jobs:
             j.join()
         
-        
-        for i in range(len(forces)):
-            forces[i,0]     +=  af1[i] + afj1[i]
-            forces[i,1]     +=  af2[i] + afj2[i]
-            forces[i,2]     +=  af3[i] + afj3[i]
-            #print i, af1[i], af2[i], af3[i]
+        forces[:,0]     +=  af1[:] 
+        forces[:,1]     +=  af2[:] 
+        forces[:,2]     +=  af3[:] 
             
     def pre_gradN(self, i, split_beg, pos_arr,  ar11, ar12, ar13, \
                                                 ar21, ar22, ar23, \
@@ -498,10 +488,10 @@ class KC_potential_p:
     
       
         
-    def forces_on_posArr(self, split_beg, pos_arr,  af1, af2, af3, afj1, afj2, afj3, dnGreat, \
+    def forces_on_posArr(self, split_beg, pos_arr,  af1, af2, af3, dnGreat, \
                              posits, pbc, cell, layer_neighbors, \
                              chem_symbs, posits_ext, neighbor_layer_inds2, \
-                             layer_indices, params, cutoff, n, map_seqs, calcet, natoms):
+                             layer_indices, params, cutoff, n, map_seqs):
         
             
         for l, ri in enumerate(pos_arr):
@@ -530,12 +520,8 @@ class KC_potential_p:
                     neigh_indices   =   nset[1]
                 
                     for j in neigh_indices: 
-                        if chem_symbs[j] == 'C' and calcet[i*natoms + j] == 0:
-
-                            calcet[i*natoms + j]    =  1
-                            calcet[i + j*natoms]    =  1
+                        if chem_symbs[j] == 'C':
                             
-
                             rj              =   posits[j]
                             nj              =   local_normal(j, posits_ext, layer_neighbors)*norm_fac
                             dnj             =   dnGreat[j]*norm_fac
@@ -549,20 +535,10 @@ class KC_potential_p:
                     
                             if new_maps != None:    self.map_seqs   =   new_maps
                             
-                            #print i, j, fij
-                            
                             af1[i]  +=  fij[0]
                             af2[i]  +=  fij[1]
                             af3[i]  +=  fij[2]
-
-                            afj1[j] +=  fji[0]
-                            afj2[j] +=  fji[1]
-                            afj3[j] +=  fji[2]
-         
-                            #af1[i]  +=  fij[0]
-                            #af2[i]  +=  fij[1]
-                            #af3[i]  +=  fij[2]
-     
+                            
      
     def adjust_potential_energy(self, posits, energy):
         

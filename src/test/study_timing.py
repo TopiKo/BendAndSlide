@@ -7,9 +7,11 @@ Created on 24.9.2014
 
 import numpy as np
 from ase.calculators.lammpsrun import LAMMPS
-from aid.help import make_graphene_slab
+from aid.help import make_graphene_slab, get_fileName
 from aid.KC_potential_constraint import KC_potential
-from aid.KC_parallell import KC_potential_p
+from aid.KC_parallel import KC_potential_p
+#from aid.KC_parallel_double_count import KC_potential_p
+
 from aid.LJ_potential_constraint import add_adhesion
 from ase.visualize import view
 import time
@@ -31,7 +33,14 @@ def time_test(width, length, N):
     atoms               =   make_graphene_slab(a,h,width,length, N, \
                                         edge_type = 'arm', h_pass = True)[3]
     
+    #mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC')[0]     
+
+    # GRAPHENE SLAB
+    #traj        =   PickleTrajectory(mdfile_read, 'r')
+    #atoms       =   traj[0]
+    #view(atoms)
     
+    params['ncores']    =   4
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
     params['cell']      =   atoms.get_cell().diagonal()
@@ -66,12 +75,14 @@ def time_test(width, length, N):
     #atoms       =   traj[-1]
     
     calc        =   LAMMPS(parameters=parameters) 
+    
+    #atoms       =   traj[-1]
     atoms.set_calculator(calc)
     # END CALCULATOR
    
     # CALCULATE NOT PARALLEL
     atoms.set_constraint(constraints1)
-    view(atoms)
+    #view(atoms)
     
     start_f     =   time.time()
     forces1 =   atoms.get_forces()
@@ -118,10 +129,11 @@ def time_test(width, length, N):
     for i, f in enumerate(forces_diff):
         if np.linalg.norm(f) > 1e-6: 
             print i
-            print np.linalg.norm(f) 
+            print forces1[i]
+            print forces2[i] 
             print 'KATASTROFI!'
-            raise
-    
+            print 
+            
     print 'ediff = %.10f' %energy_diff
     
     
@@ -132,6 +144,8 @@ def time_test(width, length, N):
 m           =   12
 natoms, time_e, time_f, time_e_p, time_f_p \
             =   np.zeros(m), np.zeros(m), np.zeros(m), np.zeros(m), np.zeros(m)
+
+#time_test(1, 2, 5)
 
 for i, n in enumerate(range(4, 4 + m)):
     width   =   1
@@ -150,3 +164,4 @@ plt.title('Time taken to calculate forces, rebo_KC + PARALLEL')
 plt.legend(loc = 2)
 
 plt.show()
+

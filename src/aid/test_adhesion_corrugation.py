@@ -151,12 +151,12 @@ def get_corrugation_energy(atoms, constraints, bond, bottom, top, indent, m):
 def plot_adhesion():
     fig         =   plt.figure()
     ax          =   fig.add_subplot(111)
-    datas       =   {'rebo_KC':np.loadtxt(path + 'datas/adhesion_data_rebo_KC.data'),
-                     'rebo_KC_iaS':np.loadtxt(path + 'datas/adhesion_data_rebo_KC_iaS.data'),
-                     'rebo_KC_p':np.loadtxt(path + 'datas/adhesion_data_rebo_KC_p.data'),
-                     'rebo_KC_iaS_p':np.loadtxt(path + 'datas/adhesion_data_rebo_KC_iaS_p.data'),
-                     'rebo_lj':np.loadtxt(path + 'datas/adhesion_data_rebo_lj.data'),
-                     'airebo':np.loadtxt(path + 'datas/adhesion_data_airebo.data')}
+    datas       =   {'rebo_KC':     np.loadtxt(path + 'datas/adhesion_data_rebo_KC.data'),
+                     'rebo_KC_iaS': np.loadtxt(path + 'datas/adhesion_data_rebo_KC_iaS.data'),
+                     'rebo_KC_p':   np.loadtxt(path + 'datas/adhesion_data_rebo_KC_p.data'),
+                     'rebo_KC_iaS_p':np.loadtxt(path+ 'datas/adhesion_data_rebo_KC_iaS_p.data'),
+                     'rebo_lj':     np.loadtxt(path + 'datas/adhesion_data_rebo_lj.data'),
+                     'airebo':      np.loadtxt(path + 'datas/adhesion_data_airebo.data')}
     
     
     for indent in datas:
@@ -177,12 +177,12 @@ def plot_adhesion():
 def plot_corrugation():
     fig         =   plt.figure()
     ax          =   fig.add_subplot(111)
-    datas       =   {'rebo_KC':np.loadtxt(path + 'datas/corrugation_data_rebo_KC.data'),
-                     'rebo_KC_iaS':np.loadtxt(path + 'datas/corrugation_data_rebo_KC_iaS.data'),
-                     'rebo_KC_p':np.loadtxt(path + 'datas/corrugation_data_rebo_KC_p.data'),
-                     'rebo_KC_iaS_p':np.loadtxt(path + 'datas/corrugation_data_rebo_KC_iaS_p.data'),
-                     'rebo_lj':np.loadtxt(path + 'datas/corrugation_data_rebo_lj.data'),
-                     'airebo':np.loadtxt(path + 'datas/corrugation_data_airebo.data')}
+    datas       =   {'rebo_KC':     np.loadtxt(path + 'datas/corrugation_data_rebo_KC.data'),
+                     'rebo_KC_iaS': np.loadtxt(path + 'datas/corrugation_data_rebo_KC_iaS.data'),
+                     'rebo_KC_p':   np.loadtxt(path + 'datas/corrugation_data_rebo_KC_p.data'),
+                     'rebo_KC_iaS_p':np.loadtxt(path+ 'datas/corrugation_data_rebo_KC_iaS_p.data'),
+                     'rebo_lj':     np.loadtxt(path + 'datas/corrugation_data_rebo_lj.data'),
+                     'airebo':      np.loadtxt(path + 'datas/corrugation_data_airebo.data')}
     
     for indent in datas:
         
@@ -241,7 +241,7 @@ def corrugationAndAdhesion(params):
     
     view(atoms_init)
     # Save something:
-    params['ncores']        =   4
+    params['ncores']        =   2
     params['positions']     =   atoms_init.positions
     params['cell']          =   atoms_init.get_cell().diagonal()
     params['pbc']           =   atoms_init.get_pbc()
@@ -371,7 +371,7 @@ def corrugationAndAdhesion(params):
     
 
 
-params  =   {'bond':bond, 'a':a, 'h':h, 'acc':49, 'width': width, 'length':length}  
+params  =   {'bond':bond, 'a':a, 'h':h, 'acc':196, 'width': width, 'length':length}  
     
 corrugationAndAdhesion(params) 
     
