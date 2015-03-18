@@ -22,15 +22,15 @@ from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
 import sys
 
-N, v, M, edge, release, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
-                                    int(sys.argv[3]), sys.argv[4], sys.argv[5], int(sys.argv[6]) 
+#N, v, M, edge, release, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
+#                                    int(sys.argv[3]), sys.argv[4], sys.argv[5], int(sys.argv[6]) 
 
-#N, v, M, edge, release   =   3, 1., 1000, 'arm', True
+N, v, M, edge, release, ncores   =   4, 1., 10000, 'arm', True, 2
 
 # fixed parameters
 bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
-h           =   3.38 
+h           =   3.37
 dt          =   2               # units: fs
 fixtop      =   2               #
 
@@ -54,8 +54,11 @@ def run_moldy(N, save = False):
     params              =   {'bond':bond, 'a':a, 'h':h}
     
     # DEFINE FILES
-    mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge)[0]  
-    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge, cont_type)[:2]    
+#    mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge)[0]  
+#    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge, cont_type)[:2]    
+    mdfile_read         =   get_fileName(N, 'fixTop', v, edge)[0]  
+    mdfile, mdlogfile   =   get_fileName(N, 'fixTop', v, edge, cont_type)[:2]    
+
 
     # GRAPHENE SLAB
     traj        =   PickleTrajectory(mdfile_read, 'r')

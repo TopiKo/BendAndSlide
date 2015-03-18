@@ -9,6 +9,7 @@ from numpy import *
 from ase import *
 from ase.visualize import view
 from scipy.optimize import fmin_l_bfgs_b #, fmin, minimize
+import numpy as np
 import sys
 
 def saveAndPrint(atoms, traj = None, print_dat = False):    
@@ -33,7 +34,7 @@ def get_save_atoms(atoms):
     new_atoms.set_pbc((pbc[0], pbc[1], pbc[2]))   
     return new_atoms    
 
-def passivate(atoms, ind):
+def passivate(atoms, ind, edge_type):
 
     from moldy.atom_groups import get_ind
     
@@ -41,7 +42,26 @@ def passivate(atoms, ind):
         ch_bond = 1.1
         rend_ind    = get_ind(atoms.positions.copy(), 'hrend')
         h_posits    = atoms.positions[rend_ind].copy()
-        h_posits[:,0] += ch_bond
+        
+        if edge_type == 'arm':
+            h_posits[:,0] += ch_bond
+        elif edge_type == 'zz':
+            add_r           =   np.zeros((len(h_posits), 3))
+            for i, r in enumerate(h_posits):
+                for r2 in h_posits:
+                    if abs(r[2] - r2[2]) < .1:
+                        if abs(r[1] - r2[1]) < 1.6:
+                            if r[1] < r2[1]:
+                                add_r[i,:]    =   [ch_bond*np.cos(np.pi/6), -ch_bond*np.sin(np.pi/6), 0]      
+                            elif r[1] > r2[1]:
+                                add_r[i,:]    =   [ch_bond*np.cos(np.pi/6), +ch_bond*np.sin(np.pi/6), 0]   
+                        elif abs(r[1] - r2[1]) > 1.6:
+                            if r[1] < r2[1]:
+                                add_r[i,:]    =   [ch_bond*np.cos(np.pi/6), ch_bond*np.sin(np.pi/6), 0]      
+                            elif r[1] > r2[1]:
+                                add_r[i,:]    =   [ch_bond*np.cos(np.pi/6), -ch_bond*np.sin(np.pi/6), 0]   
+            h_posits   +=   add_r    
+            
         for posit in h_posits:
             atoms += Atom('H', position = posit)
         return atoms
@@ -50,7 +70,27 @@ def passivate(atoms, ind):
         ch_bond = 1.1
         lend_ind    = get_ind(atoms.positions.copy(), 'hlend')
         h_posits    = atoms.positions[lend_ind].copy()
-        h_posits[:,0] -= ch_bond
+        
+        if edge_type == 'arm':
+            h_posits[:,0] -= ch_bond
+        elif edge_type == 'zz':
+            add_r           =   np.zeros((len(h_posits), 3))
+            for i, r in enumerate(h_posits):
+                for r2 in h_posits:
+                    if abs(r[2] - r2[2]) < .1:
+                        if abs(r[1] - r2[1]) < 1.6:
+                            if r[1] < r2[1]:
+                                add_r[i,:]    =   [-ch_bond*np.cos(np.pi/6), -ch_bond*np.sin(np.pi/6), 0]      
+                            elif r[1] > r2[1]:
+                                add_r[i,:]    =   [-ch_bond*np.cos(np.pi/6), +ch_bond*np.sin(np.pi/6), 0]   
+                        elif abs(r[1] - r2[1]) > 1.6:
+                            if r[1] < r2[1]:
+                                add_r[i,:]    =   [-ch_bond*np.cos(np.pi/6), ch_bond*np.sin(np.pi/6), 0]      
+                            elif r[1] > r2[1]:
+                                add_r[i,:]    =   [-ch_bond*np.cos(np.pi/6), -ch_bond*np.sin(np.pi/6), 0]   
+            h_posits   +=   add_r    
+        
+        
         for posit in h_posits:
             atoms += Atom('H', position = posit)
         return atoms
@@ -124,7 +164,7 @@ def make_graphene_slab(a,h,x1,x2,N, \
     elif edge_type == 'zz':
         width   =   x2
         length  =   x1*2
-        pbc     =   (True, False, False)
+        pbc     =   (False, True, False)
     else:
         raise
     atoms       =   Graphite('C',latticeconstant=(a,2*h),size=(width,length,N) )
@@ -168,8 +208,8 @@ def make_graphene_slab(a,h,x1,x2,N, \
     
     if h_pass:
         
-        atoms = passivate(atoms, 'rend')
-        atoms = passivate(atoms, 'lend')
+        atoms = passivate(atoms, 'rend', edge_type)
+        atoms = passivate(atoms, 'lend', edge_type)
 
         #ch_bond = 1.1
         #from moldy.atom_groups import get_ind
@@ -354,6 +394,22 @@ def get_fileName(N, indent, *args):
         mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
         mdlogfile   =   path_f + 'md_N=%i_v=%.2f%s%s.log'        %(N, v, edge, cont)
         return mdfile, mdlogfile, mdrelax
+
+    if indent == 'fixTop':
+        cont        = ''
+        v           =   args[0]
+        edge        =   '_' + args[1]
+
+        if len(args) == 3:
+            cont    =   '_' + args[2]
+           
+        path_f      =   '/space/tohekorh/BendAndSlide/files/taito/fixTop/N=%i_v=%i/%s/' %(N, v, args[1])   
+         
+        mdrelax     =   path_f + 'BFGS_init=%i_v=%.2f%s%s.traj'  %(N, v, edge, cont)
+        mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
+        mdlogfile   =   path_f + 'md_N=%i_v=%.2f%s%s.log'        %(N, v, edge, cont)
+        plotlogfile =   path_f + 'plot_log_N=%i_v=%.2f%s%s.log'  %(N, v, edge, cont)
+        return mdfile, mdlogfile, plotlogfile, mdrelax
     
     
     else:

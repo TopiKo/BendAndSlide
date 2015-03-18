@@ -54,6 +54,7 @@ def get_adhesion_energy(atoms, hmax, bottom, top, indent, m):
         atoms.positions =   new_pos
         
         e   = atoms.get_potential_energy()/natoms
+        print z - zmax, e
         return e  
 
     # Start to move the top layer in z direction
@@ -62,6 +63,8 @@ def get_adhesion_energy(atoms, hmax, bottom, top, indent, m):
 
     traj    =   PickleTrajectory(path + \
                 'trajectories/adhesion_trajectory_%s.traj' %(indent), "w", atoms)
+    
+    
     
     # Here we lift the top layer:
     for i, z in enumerate(zrange):
@@ -236,7 +239,7 @@ def corrugationAndAdhesion(params):
     
     
     atoms_init.set_pbc((True, True, False))
-    atoms_init.set_cell([3*bond, a, 15])
+    atoms_init.set_cell([3*bond, a, 35])
     atoms_init.center()
     
     view(atoms_init)
@@ -250,7 +253,7 @@ def corrugationAndAdhesion(params):
     params['chemical_symbols']  =   atoms_init.get_chemical_symbols()
     
     # This controls how far the upper layer is pulled:
-    hmax                    =   (params['cell'][2] - h)/2.1
+    hmax                    =   (params['cell'][2] - h)/5.1
     
     # FIX
     # Certain fixes are imposed. Note the KC and LJ - potential are as constraints
@@ -298,11 +301,11 @@ def corrugationAndAdhesion(params):
                              'boundary'  :'p p f'}    
 
     
-    constraint_param_sets   = [['rebo_KC', constraint_fb_kc_e, params_rebo],
-                               ['rebo_KC_iaS', constraint_fb_kc_e_iaS, params_rebo],
-                               ['rebo_KC_p', constraint_fb_kc_e_p, params_rebo],
+    constraint_param_sets   = [#['rebo_KC', constraint_fb_kc_e, params_rebo],
+                               #['rebo_KC_iaS', constraint_fb_kc_e_iaS, params_rebo],
+                               #['rebo_KC_p', constraint_fb_kc_e_p, params_rebo],
                                ['rebo_KC_iaS_p', constraint_fb_kc_e_iaS_p, params_rebo],
-                               ['rebo_lj', constraint_fb_lj_e, params_rebo], 
+                               #['rebo_lj', constraint_fb_lj_e, params_rebo], 
                                ['airebo',  constraint_fb, params_airebo]] 
     
     data_adh    =   {}
@@ -356,8 +359,8 @@ def corrugationAndAdhesion(params):
             atoms.positions     =   init_posits
             print 'Corrugation'
             
-            data_corr[indent]   =   get_corrugation_energy(atoms, constraints, \
-                                                           bond, bottom, top, indent, acc)
+            #data_corr[indent]   =   get_corrugation_energy(atoms, constraints, \
+            #                                               bond, bottom, top, indent, acc)
             
             
         else:
@@ -371,7 +374,7 @@ def corrugationAndAdhesion(params):
     
 
 
-params  =   {'bond':bond, 'a':a, 'h':h, 'acc':196, 'width': width, 'length':length}  
+params  =   {'bond':bond, 'a':a, 'h':h, 'acc':588, 'width': width, 'length':length}  
     
 corrugationAndAdhesion(params) 
     

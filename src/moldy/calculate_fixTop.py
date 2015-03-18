@@ -21,22 +21,22 @@ from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
 import sys
 
-N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
+#N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
 
-#N, v, M, edge   =   3, 1.,  1000, 'arm'
+N, v, M, edge, ncores   =   6, 1.,  1000, 'zz', 2 
 
 # fixed parameters
 bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
-h           =   3.38 
+h           =   3.39 
 dt          =   2               # units: fs
-length      =   4*1 #8 #16            # slab length has to be integer*2
+length      =   4*6 #16            # slab length has to be integer*2
 width       =   1               # slab width
 fixtop      =   2               #
 
 # SIMULATION PARAMS
 dt          =   2               # fs
-dz          =   dt*v/1000.      # d/M  
+dz          =   dt*v/M          # d/M  
 
 T           =   0.              # temperature
 interval    =   10              # interval for writing stuff down
@@ -49,8 +49,6 @@ def run_moldy(N, save = False):
     
     # DEFINE FILES
     mdfile, mdlogfile, mdrelax = get_fileName(N, 'tear_E_rebo+KC_v', v, edge)  
-    
-    print mdfile 
     
     # GRAPHENE SLAB
     atoms               =   make_graphene_slab(a,h,width,length,N, \
@@ -108,7 +106,7 @@ def run_moldy(N, save = False):
     # RELAX
     atoms.set_constraint(add_kc)
     dyn     =   BFGS(atoms, trajectory = mdrelax)
-    dyn.run(fmax=0.05)
+    dyn.run(fmax=0.01)
     
     # FIX AFTER RELAXATION
     atoms.set_constraint(constraints)

@@ -9,8 +9,8 @@ import numpy as np
 from ase.calculators.lammpsrun import LAMMPS
 from aid.help import make_graphene_slab, get_fileName
 from aid.KC_potential_constraint import KC_potential
-from aid.KC_parallel import KC_potential_p
-#from aid.KC_parallel_double_count import KC_potential_p
+#from aid.KC_parallel import KC_potential_p
+from aid.KC_parallel_double_count import KC_potential_p
 
 from aid.LJ_potential_constraint import add_adhesion
 from ase.visualize import view
