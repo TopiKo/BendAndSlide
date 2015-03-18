@@ -358,7 +358,6 @@ class KC_potential_p:
     
     def adjust_forces(self, posits, forces):
         
-        print 'forces'
         #tt1             =   time.time()
         #calcet          =   zeros((len(posits), len(posits)))
         

@@ -23,7 +23,7 @@ import sys
 
 #N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
 
-N, v, M, edge, ncores   =   6, 1.,  1000, 'zz', 2 
+N, v, M, edge, ncores   =   4, 1.,  10000, 'zz', 2 
 
 # fixed parameters
 bond        =   1.39695
