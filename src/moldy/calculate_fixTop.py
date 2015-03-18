@@ -21,14 +21,14 @@ from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
 import sys
 
-#N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
+N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
 
-N, v, M, edge, ncores   =   4, 1.,  10000, 'zz', 2 
+#N, v, M, edge, ncores   =   4, 1.,  10000, 'zz', 2 
 
 # fixed parameters
 bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
-h           =   3.39 
+h           =   3.3705 
 dt          =   2               # units: fs
 length      =   4*6 #16            # slab length has to be integer*2
 width       =   1               # slab width
@@ -66,6 +66,7 @@ def run_moldy(N, save = False):
     
     left        =   get_ind(atoms.positions.copy(), 'left', 2, bond)
     top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
+    rend_t      =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), 1)
     rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop)
     
     
@@ -76,6 +77,10 @@ def run_moldy(N, save = False):
 
     
     for ind in rend:
+        fix_deform  =   FixedPlane(ind, (0., 0., 1.))
+        constraints.append(fix_deform)
+    
+    for ind in rend_t:
         fix_deform  =   FixedPlane(ind, (0., 0., 1.))
         constraints.append(fix_deform)
     
@@ -95,7 +100,7 @@ def run_moldy(N, save = False):
     atoms.set_calculator(calc)
     # END CALCULATOR
     
-    view(atoms)
+    #view(atoms)
     
     # TRAJECTORY
     if save:    traj    =   PickleTrajectory(mdfile, 'w', atoms)

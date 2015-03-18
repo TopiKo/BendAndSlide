@@ -388,7 +388,7 @@ def get_fileName(N, indent, *args):
         if len(args) == 3:
             cont    =   '_' + args[2]
            
-        path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')   
+        #path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')   
          
         mdrelax     =   path_f + 'BFGS_init=%i_v=%.2f%s%s.traj'  %(N, v, edge, cont)
         mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
