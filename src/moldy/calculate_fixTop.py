@@ -106,7 +106,7 @@ def run_moldy(N, save = False):
     # RELAX
     atoms.set_constraint(add_kc)
     dyn     =   BFGS(atoms, trajectory = mdrelax)
-    dyn.run(fmax=0.01)
+    dyn.run(fmax=0.05)
     
     # FIX AFTER RELAXATION
     atoms.set_constraint(constraints)
