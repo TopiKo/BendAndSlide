@@ -12,6 +12,8 @@ from scipy.optimize import fmin_l_bfgs_b #, fmin, minimize
 import numpy as np
 import sys
 
+import os.path
+
 def saveAndPrint(atoms, traj = None, print_dat = False):    
     epot = atoms.get_potential_energy() #/len(atoms)
     ekin = atoms.get_kinetic_energy()   #/len(atoms)
@@ -218,7 +220,8 @@ def make_graphene_slab(a,h,x1,x2,N, \
         #h_posits[:,0] += ch_bond
         #for posit in h_posits:
         #    atoms += Atom('H', position = posit)
-        
+    
+    
     return H,W,L,atoms
 
 def deform(positions, top, dist, indent):
@@ -388,7 +391,7 @@ def get_fileName(N, indent, *args):
         if len(args) == 3:
             cont    =   '_' + args[2]
            
-        #path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')   
+        path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')   
          
         mdrelax     =   path_f + 'BFGS_init=%i_v=%.2f%s%s.traj'  %(N, v, edge, cont)
         mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
@@ -409,11 +412,51 @@ def get_fileName(N, indent, *args):
         mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
         mdlogfile   =   path_f + 'md_N=%i_v=%.2f%s%s.log'        %(N, v, edge, cont)
         plotlogfile =   path_f + 'plot_log_N=%i_v=%.2f%s%s.log'  %(N, v, edge, cont)
-        return mdfile, mdlogfile, plotlogfile, mdrelax
+        plotKClog   =   path_f + 'KC_log_N=%i_v=%.2f%s%s'        %(N, v, edge, cont)
+        
+        return mdfile, mdlogfile, plotlogfile, plotKClog, mdrelax
     
     
     else:
         raise
+    
+
+def get_traj_and_ef(mdfile, mdLogFile, cmdfile, cmdLogFile):
+    
+    traj        =   PickleTrajectory(mdfile, 'r')
+    ef          =   np.loadtxt(mdLogFile)
+    conc        =   False
+    
+    posits  =   np.empty(len(traj), dtype = 'object')
+    for i in range(len(traj)):
+        posits[i]   =   traj[i].positions
+    
+    if os.path.isfile(cmdLogFile):
+        cef     =   np.loadtxt(cmdLogFile)
+        cef[:,0]   +=   ef[-1,0]
+        cef[:,1]   +=   ef[-1,1]
+        conc    =   True
+        print 'we concatenate the extented bending!'
+        ef      =   np.concatenate((ef, cef))
+        
+    if os.path.isfile(cmdfile):
+        ctraj   =   PickleTrajectory(cmdfile, 'r')
+        posits  =   np.empty(len(ctraj) + len(traj), dtype = 'object')
+        
+        delta_z =   ctraj[0].positions[0][2] - traj[-1].positions[0][2] 
+        
+        ntraj   =   []
+        for i in range(len(traj)):
+            ntraj.append(traj[i])
+            posits[i]   =   traj[i].positions
+        for i in range(len(ctraj)):
+            ntraj.append(ctraj[i])
+            posits[len(traj) + i]       =   ctraj[i].positions # -   delta_z   
+            posits[len(traj) + i][:,2] -=   delta_z
+        traj    =   ntraj
+    
+    return traj, ef, conc, posits
+    
     
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.
@@ -476,4 +519,122 @@ def collect_files(dyn, Nset = None):
     
     
     return data_take
-            
+
+def get_pairs(atoms):
+    
+    layer_indices   =   find_layers(atoms.positions)[1]
+    positions       =   atoms.positions
+    tops            =   np.zeros((len(positions), len(positions)))
+    for i in range(len(layer_indices) -1):
+        layer   =   layer_indices[i]
+        for atom in layer:
+            if atoms[atom].number == 6:
+                ri          =   positions[atom]
+                layer_up    =   layer_indices[i + 1]
+                for atom_up in layer_up:
+                    rj      =   positions[atom_up]
+                    if np.linalg.norm(rj - ri) < 3.5:
+                        tops[atom, atom_up] =   1
+                        #tops[atom_up, atom] =   1
+    return tops             
+
+def get_pairs2(atoms):
+    
+    layer_indices   =   find_layers(atoms.positions)[1]
+    positions       =   atoms.positions
+    tops            =   np.zeros((len(positions), len(positions)))
+    bots            =   np.zeros((len(positions), len(positions)))
+    
+    for i in range(len(layer_indices) - 1):
+        layer   =   layer_indices[i]
+        for atom in layer:
+            if atoms[atom].number == 6:
+                ri          =   positions[atom]
+                layer_up    =   layer_indices[i + 1]
+                for atom_up in layer_up:
+                    rj      =   positions[atom_up]
+                    if np.linalg.norm(rj - ri) < 3.5:
+                        tops[atom, atom_up] =   1
+                        bots[atom_up, atom] =   1
+    return bots, tops    
+
+def make_colormap(seq, alphas):
+    import matplotlib.colors as mcolors
+    
+    """Return a LinearSegmentedColormap
+    seq: a sequence of floats and RGB-tuples. The floats should be increasing
+    and in the interval (0,1).
+    """
+    seq         = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
+    
+    cdict = {'red': [], 'green': [], 'blue': [], 'alpha':[]}
+    for i, item in enumerate(seq):
+        if isinstance(item, float):
+            r1, g1, b1 = seq[i - 1]
+            r2, g2, b2 = seq[i + 1]
+            cdict['red'].append([item, r1, r2])
+            cdict['green'].append([item, g1, g2])
+            cdict['blue'].append([item, b1, b2])
+    
+        
+    for item in alphas:
+        r, alpha    =   item[0], item[1]
+        cdict['alpha'].append([r, alpha, alpha])
+    
+    return mcolors.LinearSegmentedColormap('CustomMap', cdict)   
+
+
+
+def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
+    import matplotlib
+    import matplotlib.pyplot as plt
+    '''
+    Function to offset the "center" of a colormap. Useful for
+    data with a negative min and positive max and you want the
+    middle of the colormap's dynamic range to be at zero
+
+    Input
+    -----
+      cmap : The matplotlib colormap to be altered
+      start : Offset from lowest point in the colormap's range.
+          Defaults to 0.0 (no lower ofset). Should be between
+          0.0 and `midpoint`.
+      midpoint : The new center of the colormap. Defaults to 
+          0.5 (no shift). Should be between 0.0 and 1.0. In
+          general, this should be  1 - vmax/(vmax + abs(vmin))
+          For example if your data range from -15.0 to +5.0 and
+          you want the center of the colormap at 0.0, `midpoint`
+          should be set to  1 - 5/(5 + 15)) or 0.75
+      stop : Offset from highets point in the colormap's range.
+          Defaults to 1.0 (no upper ofset). Should be between
+          `midpoint` and 1.0.
+    '''
+    cdict = {
+        'red': [],
+        'green': [],
+        'blue': [],
+        'alpha': []
+    }
+
+    # regular index to compute the colors
+    reg_index = np.linspace(start, stop, 257)
+
+    # shifted index to match the data
+    shift_index = np.hstack([
+        np.linspace(0.0, midpoint, 128, endpoint=False), 
+        np.linspace(midpoint, 1.0, 129, endpoint=True)
+    ])
+
+    for ri, si in zip(reg_index, shift_index):
+        r, g, b, a = cmap(ri)
+
+        cdict['red'].append((si, r, r))
+        cdict['green'].append((si, g, g))
+        cdict['blue'].append((si, b, b))
+        cdict['alpha'].append((si, a, a))
+
+    newcmap = matplotlib.colors.LinearSegmentedColormap(name, cdict)
+    plt.register_cmap(cmap=newcmap)
+
+    return newcmap      
+

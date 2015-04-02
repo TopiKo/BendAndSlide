@@ -653,5 +653,57 @@ class KC_potential_p:
                             if new_maps != None:    self.map_seqs   =   new_maps
                             
                             e_KCm[k]       +=  e
+    
+    
+    # TETSTEST
+    def energy_i(self, posits):
         
+        params          =   self.params
+        pbc, cell, cutoff, n, map_seqs    \
+                        =   self.pbc, self.cell, self.cutoff, self.n, self.map_seqs
+        posits_ext      =   extend_structure(posits.copy(), self.pbc, self.cell)
+        layer_indices   =   self.layer_indices
+        layer_neighbors =   self.layer_neighbors
+        chem_symbs      =   self.chem_symbs
+        neighbor_layer_inds2  \
+                        =   self.neighbor_layer_inds
+        
+        e_KC            =   np.zeros(len(posits))
+        
+        for i, ri in enumerate(posits):
+            if chem_symbs[i] == 'C':
+                ni              =   local_normal(i, posits_ext, layer_neighbors)
+                neigh           =   neighbor_layer_inds2[which_layer(i, layer_indices)[0]]
+                
+                for nset in neigh:
+                    
+                    if nset[0] == 'bottom':
+                        norm_fac    =   1
+                        ni          =   -1*ni
+                    elif nset[0] == 'top':
+                        norm_fac    =   -1   
+                                         
+                    
+                    neigh_indices   =   nset[1]
+                
+                    for j in neigh_indices: 
+                        if chem_symbs[j] == 'C': # and calcet[i, j] == 0:
+                            #calcet[i,j]     =  1
+                            #calcet[j,i]     =  1
+                            
+                            rj              =   posits[j]
+                            nj              =   local_normal(j, posits_ext, layer_neighbors)*norm_fac
+                            
+                            e, new_maps     =   get_potential_ij(ri, rj, ni, nj, posits, i, j, params, \
+                                                         pbc, cell, cutoff, n, map_seqs) 
+                    
+                            if new_maps != None:    self.map_seqs   =   new_maps
+                            
+                            e_KC[i]       +=  e
+        
+        return e_KC
+        
+        
+    # TETSTEST
+
     

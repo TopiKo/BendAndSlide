@@ -21,24 +21,26 @@ from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
 import sys
 
-N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
+#N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
 
-#N, v, M, edge, ncores   =   4, 1.,  10000, 'zz', 2 
+N, v, M, edge, ncores   =   3, 1.,  10000, 'zz', 2 
 
 # fixed parameters
 bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
 h           =   3.3705 
 dt          =   2               # units: fs
-length      =   4*6 #16            # slab length has to be integer*2
+length      =   4*14 #16            # slab length has to be integer*2
 width       =   1               # slab width
 fixtop      =   2               #
 
 # SIMULATION PARAMS
 dt          =   2               # fs
-dz          =   dt*v/M          # d/M  
+dz          =   dt*v/1000.      # d/M  
+fric        =   0.002
 
-T           =   0.              # temperature
+tau         =   10./fric
+T           =   0.       # ~10K       # temperature
 interval    =   10              # interval for writing stuff down
     
 
@@ -53,7 +55,7 @@ def run_moldy(N, save = False):
     # GRAPHENE SLAB
     atoms               =   make_graphene_slab(a,h,width,length,N, \
                                                edge_type = edge, h_pass = True)[3]
-    
+    view(atoms)
     params['ncores']    =   ncores
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
@@ -117,7 +119,7 @@ def run_moldy(N, save = False):
     atoms.set_constraint(constraints)
     
     # DYNAMICS
-    dyn     =   Langevin(atoms, dt*units.fs, T*units.kB, 0.002)
+    dyn     =   Langevin(atoms, dt*units.fs, T*units.kB, fric)
     n       =   0
     header  =   '#t [fs], d [Angstrom], epot_tot [eV], ekin_tot [eV], etot_tot [eV] \n'
     log_f   =   open(mdlogfile, 'w')
@@ -127,8 +129,11 @@ def run_moldy(N, save = False):
     print 'Start the dynamics for N = %i' %N
     
     for i in range(0, M):
-        for ind in rend:
-            atoms[ind].position[2] -= dz 
+        
+        if tau < i*dt and T != 0.:
+            for ind in rend:
+                atoms[ind].position[2] -= dz 
+        
         dyn.run(1)
         
         if i%interval == 0:

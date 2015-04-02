@@ -29,7 +29,7 @@ bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
 h           =   3.38 
 
-length      =   2*1             # slab length has to be integer*2
+length      =   1             
 width       =   1               # slab width
 N           =   2
 
@@ -113,7 +113,10 @@ def get_optimal_h(atoms, bottom, top, natoms, dyn = False):
         
 def get_corrugation_energy(atoms, constraints, bond, bottom, top, indent, m):
     
-    xset        =   np.linspace(0., 3*bond, m) 
+    if 'zz' in indent:
+        xset        =   np.linspace(0., np.sqrt(3)*bond, m) 
+    elif 'arm' in indent:
+        xset        =   np.linspace(0., 3*bond, m) 
     atoms_init  =   atoms.copy()
     
     natoms      =   0
@@ -151,15 +154,20 @@ def get_corrugation_energy(atoms, constraints, bond, bottom, top, indent, m):
     np.savetxt(path + 'datas/corrugation_data_%s.data' %(indent), corr_pot)
     return corr_pot
 
-def plot_adhesion():
+def plot_adhesion(indents):
     fig         =   plt.figure()
     ax          =   fig.add_subplot(111)
+    '''
     datas       =   {'rebo_KC':     np.loadtxt(path + 'datas/adhesion_data_rebo_KC.data'),
                      'rebo_KC_iaS': np.loadtxt(path + 'datas/adhesion_data_rebo_KC_iaS.data'),
                      'rebo_KC_p':   np.loadtxt(path + 'datas/adhesion_data_rebo_KC_p.data'),
                      'rebo_KC_iaS_p':np.loadtxt(path+ 'datas/adhesion_data_rebo_KC_iaS_p.data'),
                      'rebo_lj':     np.loadtxt(path + 'datas/adhesion_data_rebo_lj.data'),
                      'airebo':      np.loadtxt(path + 'datas/adhesion_data_airebo.data')}
+    '''
+    datas       =   {}
+    for ind in indents:
+        datas[ind]  =  np.loadtxt(path + 'datas/adhesion_data_%s.data' %ind)
     
     
     for indent in datas:
@@ -177,15 +185,20 @@ def plot_adhesion():
     #plt.savefig(path + 'pictures/Adhesion_energy.svg')
     plt.show()    
 
-def plot_corrugation():
+def plot_corrugation(indents):
     fig         =   plt.figure()
     ax          =   fig.add_subplot(111)
+    '''
     datas       =   {'rebo_KC':     np.loadtxt(path + 'datas/corrugation_data_rebo_KC.data'),
                      'rebo_KC_iaS': np.loadtxt(path + 'datas/corrugation_data_rebo_KC_iaS.data'),
                      'rebo_KC_p':   np.loadtxt(path + 'datas/corrugation_data_rebo_KC_p.data'),
                      'rebo_KC_iaS_p':np.loadtxt(path+ 'datas/corrugation_data_rebo_KC_iaS_p.data'),
                      'rebo_lj':     np.loadtxt(path + 'datas/corrugation_data_rebo_lj.data'),
                      'airebo':      np.loadtxt(path + 'datas/corrugation_data_airebo.data')}
+    '''
+    datas       =   {}
+    for ind in indents:
+        datas[ind]  =  np.loadtxt(path + 'datas/corrugation_data_%s.data' %ind)
     
     for indent in datas:
         
@@ -222,12 +235,30 @@ def get_adhesion_LJ(zset, CperArea):
         
 def corrugationAndAdhesion(params):
     
+    
     bond        =   params['bond']
     a           =   np.sqrt(3)*bond # 2.462
     h           =   params['h']
     acc         =   params['acc']
     width       =   params['width']
     length      =   params['length'] 
+    
+    
+    edge        =   'arm'
+    pbc         =   (True, True, False)
+    cell_h      =   h*N + 5
+    
+    cell_add_x  =   0.
+    if not pbc[0]:
+        cell_add_x  =   12 
+    
+    if edge == 'zz':
+        diag_cell   =   [a*length + cell_add_x, 3*bond, cell_h]
+    elif edge == 'arm':
+        length      =   length*2
+        diag_cell   =   [3*bond*length/2 + cell_add_x, a, cell_h]
+        
+    
        
     # Carbon atoms per unit area
     CperArea    =   (a**2*np.sqrt(3)/4)**(-1)
@@ -235,11 +266,13 @@ def corrugationAndAdhesion(params):
     # Initial atoms graphite:
     #atoms_init              =   make_graphene_slab(a,h,width,length,N, (True, True, False))[3]
     atoms_init              =   make_graphene_slab(a,h, width,length, N, \
-                                                   edge_type = 'arm', h_pass = False)[3]
+                                                   edge_type = edge, h_pass = False)[3]
     
     
-    atoms_init.set_pbc((True, True, False))
-    atoms_init.set_cell([3*bond, a, 35])
+    atoms_init.set_pbc(pbc)
+    #atoms_init.set_cell([3*bond, a, 35])
+    atoms_init.set_cell(diag_cell)
+    
     atoms_init.center()
     
     view(atoms_init)
@@ -304,18 +337,19 @@ def corrugationAndAdhesion(params):
     constraint_param_sets   = [#['rebo_KC', constraint_fb_kc_e, params_rebo],
                                #['rebo_KC_iaS', constraint_fb_kc_e_iaS, params_rebo],
                                #['rebo_KC_p', constraint_fb_kc_e_p, params_rebo],
-                               ['rebo_KC_iaS_p', constraint_fb_kc_e_iaS_p, params_rebo],
+                               ['rebo_KC_iaS_p_%s' %edge, constraint_fb_kc_e_iaS_p, params_rebo],
                                #['rebo_lj', constraint_fb_lj_e, params_rebo], 
-                               ['airebo',  constraint_fb, params_airebo]] 
+                               ['airebo_%s' %edge,  constraint_fb, params_airebo]] 
     
     data_adh    =   {}
     data_corr   =   {}
-    
+    indents     =   []
     # Loop over three different methods:
     for const_params in constraint_param_sets: 
         
         # Name for the method:
         indent          =   const_params[0]
+        indents.append(indent)
         print indent
         
         if indent != 'LJ':
@@ -359,22 +393,24 @@ def corrugationAndAdhesion(params):
             atoms.positions     =   init_posits
             print 'Corrugation'
             
-            #data_corr[indent]   =   get_corrugation_energy(atoms, constraints, \
-            #                                               bond, bottom, top, indent, acc)
+            data_corr[indent]   =   get_corrugation_energy(atoms, constraints, \
+                                                           bond, bottom, top, indent, acc)
             
             
         else:
             data_adh['LJ']      =   get_adhesion_LJ(data_adh['rebo_KC'][:,0], CperArea) 
     
     #PLOT and save
-    plot_adhesion()
-    plot_corrugation()
+    
+    
+    plot_adhesion(indents)
+    plot_corrugation(indents)
     
        
     
 
 
-params  =   {'bond':bond, 'a':a, 'h':h, 'acc':588, 'width': width, 'length':length}  
+params  =   {'bond':bond, 'a':a, 'h':h, 'acc':193, 'width': width, 'length':length}  
     
 corrugationAndAdhesion(params) 
     

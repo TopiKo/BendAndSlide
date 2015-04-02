@@ -23,9 +23,13 @@ from ase.visualize import view
 import sys
 
 N, v, M, edge, release, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
-                                    int(sys.argv[3]), sys.argv[4], sys.argv[5], int(sys.argv[6]) 
+                                    int(sys.argv[3]), sys.argv[4], \
+                                    sys.argv[5] in ['True', 'true', 1], int(sys.argv[6]) 
 
-#N, v, M, edge, release, ncores   =   4, 1., 10000, 'arm', True, 2
+#N, v, M, edge, release, ncores   =   15, 1., 10000, 'arm', False, 2
+print sys.argv[5]
+print bool(sys.argv[5])
+  
 
 # fixed parameters
 bond        =   1.39695
@@ -50,14 +54,14 @@ def run_moldy(N, save = False):
         cont_type = 'cont_bend'
 
     
-    print release    
+    print release, cont_type    
     params              =   {'bond':bond, 'a':a, 'h':h}
     
     # DEFINE FILES
-    mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge)[0]  
-    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge, cont_type)[:2]    
-#    mdfile_read         =   get_fileName(N, 'fixTop', v, edge)[0]  
-#    mdfile, mdlogfile   =   get_fileName(N, 'fixTop', v, edge, cont_type)[:2]    
+#    mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge)[0]  
+#    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge, cont_type)[:2]    
+    mdfile_read         =   get_fileName(N, 'fixTop', v, edge)[0]  
+    mdfile, mdlogfile   =   get_fileName(N, 'fixTop', v, edge, cont_type)[:2]    
 
 
     # GRAPHENE SLAB
@@ -79,7 +83,17 @@ def run_moldy(N, save = False):
     rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop)
     
     # use initial atoms to obtain fixes
-    atoms       =   traj[-1]
+    if not release:
+        atoms       =   traj[-1]
+    elif release:
+        n_begin     =   -1
+        atoms       =   traj[n_begin]
+        
+    cell_h      =   atoms.get_cell()[2,2]
+    zmax        =   np.max(atoms.positions[top,2])
+    
+    if not release:
+        atoms.translate([0.,0., cell_h - zmax - 10])
     
     fix_left    =   FixAtoms(indices = left)
     fix_top     =   FixAtoms(indices = top)
@@ -115,7 +129,7 @@ def run_moldy(N, save = False):
     if save:    traj    =   PickleTrajectory(mdfile, 'w', atoms)
     else:       traj    =   None
     
-    #view(atoms)
+    view(atoms)
     
     # FIX 
     atoms.set_constraint(constraints)
