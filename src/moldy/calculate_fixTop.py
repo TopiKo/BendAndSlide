@@ -130,10 +130,14 @@ def run_moldy(N, save = False):
     
     for i in range(0, M):
         
-        if tau < i*dt and T != 0.:
+        if T == 0:
             for ind in rend:
                 atoms[ind].position[2] -= dz 
-        
+        elif T != 0:
+            if tau < i*dt:
+                for ind in rend:
+                    atoms[ind].position[2] -= dz 
+            
         dyn.run(1)
         
         if i%interval == 0:
