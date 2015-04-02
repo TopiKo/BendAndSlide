@@ -151,6 +151,9 @@ def run_moldy(N, save = False):
                         stringi += '%.6f ' %d
                     else:
                         stringi += '%.12f ' %d
+                
+                if T != 0 and i*dt == tau:
+                    log_f.write('# Thermalization complete. ' +  '\n')
                 log_f.write(stringi +  '\n')
                 log_f.close()
                   

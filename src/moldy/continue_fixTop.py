@@ -41,10 +41,13 @@ fixtop      =   2               #
 # SIMULATION PARAMS
 dt          =   2               # fs
 dz          =   dt*v/1000.      # d/M  
+fric        =   0.002
 
+tau         =   10./fric
 T           =   0.              # temperature
 interval    =   10              # interval for writing stuff down
 
+n_begin     =   -1
 
 def run_moldy(N, save = False):
     
@@ -76,7 +79,8 @@ def run_moldy(N, save = False):
     params['chemical_symbols']  =   atoms.get_chemical_symbols()
     
     # FIX
-    constraints =   []
+    constraints         =   []
+    constraints_init    =   []
     
     left        =   get_ind(atoms.positions.copy(), 'left', 2, bond)
     top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
@@ -86,7 +90,6 @@ def run_moldy(N, save = False):
     if not release:
         atoms       =   traj[-1]
     elif release:
-        n_begin     =   -1
         atoms       =   traj[n_begin]
         
     cell_h      =   atoms.get_cell()[2,2]
@@ -105,6 +108,10 @@ def run_moldy(N, save = False):
         for ind in rend:
             fix_deform  =   FixedPlane(ind, (0., 0., 1.))
             constraints.append(fix_deform)
+    if release and T != 0:
+        for ind in rend:
+            fix_deform  =   FixedPlane(ind, (0., 0., 1.))
+            constraints_init.append(fix_deform)
     
     constraints.append(fix_left)
     constraints.append(fix_top)
@@ -132,10 +139,17 @@ def run_moldy(N, save = False):
     view(atoms)
     
     # FIX 
-    atoms.set_constraint(constraints)
+    if T != 0:
+        constraints_therm   =   []
+        for const in constraints:
+            constraints_therm.append(const)
+        for const in constraints_init:
+            constraints_therm.append(const)
+    
+    atoms.set_constraint(constraints_therm)
     
     # DYNAMICS
-    dyn     =   Langevin(atoms, dt*units.fs, T*units.kB, 0.002)
+    dyn     =   Langevin(atoms, dt*units.fs, T*units.kB, fric)
     n       =   0
     
     header  =   '#t [fs], d [Angstrom], epot_tot [eV], ekin_tot [eV] \n'
@@ -148,11 +162,29 @@ def run_moldy(N, save = False):
     
     
     for i in range(0, M):
-        if not release:
-            for ind in rend:
-                atoms[ind].position[2] -= dz 
         
-        dyn.run(1)
+
+        if not release:
+            if T != 0.:
+                if i*dt < tau:
+                    dyn.run(1)
+                elif tau <= i*dt:
+                    for ind in rend:
+                        atoms[ind].position[2] -= dz 
+                    dyn.run(1)
+            elif T == 0:
+                for ind in rend:
+                    atoms[ind].position[2] -= dz 
+                dyn.run(1)
+        elif release:
+            if T != 0.:
+                if i*dt == tau:
+                    # ensure empty constraints
+                    del atoms.constraints
+                    # add the desired constraints
+                    atoms.set_constraint(constraints)
+            dyn.run(1)
+                
         
         if i%interval == 0:
             
@@ -169,6 +201,10 @@ def run_moldy(N, save = False):
                         stringi += '%.6f ' %d
                     else:
                         stringi += '%.12f ' %d
+                
+                if T != 0 and i*dt == tau:
+                    log_f.write('# Thermalization complete. ' +  '\n')
+                
                 log_f.write(stringi +  '\n')
                 log_f.close()
                   
