@@ -358,7 +358,7 @@ def find_layers(positions):
                 
     return layers, inds_L
 
-def get_fileName(N, indent, *args):
+def get_fileName(N, indent, taito, *args):
     
     if indent == 'tear_E':
         potential   =   args[0]
@@ -391,14 +391,17 @@ def get_fileName(N, indent, *args):
         if len(args) == 3:
             cont    =   '_' + args[2]
            
-        path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')   
-         
+        if not taito:
+            path_f      =   '/space/tohekorh/BendAndSlide/files/%s/' %('rebo+KC')   
+        elif taito:
+            path_f      =   ''
+        
         mdrelax     =   path_f + 'BFGS_init=%i_v=%.2f%s%s.traj'  %(N, v, edge, cont)
         mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
         mdlogfile   =   path_f + 'md_N=%i_v=%.2f%s%s.log'        %(N, v, edge, cont)
         return mdfile, mdlogfile, mdrelax
 
-    if indent == 'fixTop':
+    if indent == 'fixTop' or indent == 'fixTop_T=10':
         cont        = ''
         v           =   args[0]
         edge        =   '_' + args[1]
@@ -406,15 +409,22 @@ def get_fileName(N, indent, *args):
         if len(args) == 3:
             cont    =   '_' + args[2]
            
-        path_f      =   '/space/tohekorh/BendAndSlide/files/taito/fixTop/N=%i_v=%i/%s/' %(N, v, args[1])   
+
+        if not taito:
+            path_f      =   '/space/tohekorh/BendAndSlide/files/taito/%s/N=%i_v=%i/%s/' %(indent, N, v, args[1])   
+        elif taito:
+            path_f      =   ''
+
          
         mdrelax     =   path_f + 'BFGS_init=%i_v=%.2f%s%s.traj'  %(N, v, edge, cont)
         mdfile      =   path_f + 'md_N=%i_v=%.2f%s%s.traj'       %(N, v, edge, cont)
         mdlogfile   =   path_f + 'md_N=%i_v=%.2f%s%s.log'        %(N, v, edge, cont)
         plotlogfile =   path_f + 'plot_log_N=%i_v=%.2f%s%s.log'  %(N, v, edge, cont)
         plotKClog   =   path_f + 'KC_log_N=%i_v=%.2f%s%s'        %(N, v, edge, cont)
+        plotShiftlog=   path_f + 'Shift_log_N=%i_v=%.2f%s%s'     %(N, v, edge, cont)
+        plotIlDistlog=  path_f + 'Il_dist_log_N=%i_v=%.2f%s%s'   %(N, v, edge, cont)
         
-        return mdfile, mdlogfile, plotlogfile, plotKClog, mdrelax
+        return mdfile, mdlogfile, plotlogfile, plotKClog, plotShiftlog, plotIlDistlog, mdrelax
     
     
     else:

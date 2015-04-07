@@ -27,6 +27,7 @@ N, v, M, edge, release, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
                                     sys.argv[5] in ['True', 'true', 1], int(sys.argv[6]) 
 
 #N, v, M, edge, release, ncores   =   15, 1., 10000, 'arm', False, 2
+taito       =   False
 print sys.argv[5]
 print bool(sys.argv[5])
   
@@ -63,8 +64,8 @@ def run_moldy(N, save = False):
     # DEFINE FILES
 #    mdfile_read         =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge)[0]  
 #    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge, cont_type)[:2]    
-    mdfile_read         =   get_fileName(N, 'fixTop', v, edge)[0]  
-    mdfile, mdlogfile   =   get_fileName(N, 'fixTop', v, edge, cont_type)[:2]    
+    mdfile_read         =   get_fileName(N, 'fixTop', taito, v, edge)[0]  
+    mdfile, mdlogfile   =   get_fileName(N, 'fixTop', taito, v, edge, cont_type)[:2]    
 
 
     # GRAPHENE SLAB
@@ -202,15 +203,19 @@ def run_moldy(N, save = False):
                     else:
                         stringi += '%.12f ' %d
                 
-                if T != 0 and i*dt == tau:
-                    log_f.write('# Thermalization complete. ' +  '\n')
-                
                 log_f.write(stringi +  '\n')
                 log_f.close()
                   
 
             n += 1
+            
+        
+        if save and T != 0 and i*dt == tau:
+            log_f   =   open(mdlogfile, 'a')
+            log_f.write('# Thermalization complete. ' +  '\n')
+            log_f.close()
     
+        
         if 1e2 <= M:    
             if i%(int(M/100)) == 0: print 'ready = %.1f' %(i/(int(M/100))) + '%' 
 

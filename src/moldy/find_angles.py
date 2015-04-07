@@ -264,7 +264,7 @@ def plot_atoms2(positions_t, angles_t, angles_av_t, Rads_t, \
 def plot_atoms3(positions_t, angles_t, angles_av_t, Rads_t, \
                z0s_t, x0s_t, yav_t, ep, N, edge, z_t, bond, iz, \
                edif_min, edif_max, limits, line_limits, e_KC, shift_table, \
-               pair_table, il_dist, path_to_fig):
+               il_dist, path_to_fig):
     
     
     fig2=   plt.subplots(figsize = (10,18))
@@ -288,9 +288,9 @@ def plot_atoms3(positions_t, angles_t, angles_av_t, Rads_t, \
 
     ########################
     plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z, \
-            limits, line_limits, shift_table, pair_table, edif_min, edif_max, edge)
+            limits, line_limits, shift_table, edif_min, edif_max, edge)
     
-    plot_il(ax5, N, positions, layer_indices_f, limits, pair_table, il_dist)
+    plot_il(ax5, N, positions, layer_indices_f, limits, il_dist)
     
     
     plot_angle_epot(ax2, ep, z_t, angles_av_t, iz, line_limits)
@@ -349,7 +349,7 @@ def plot_angle_epot(ax, ep, z_t, angles_av_t, iz, line_limits):
     ax2a.set_ylabel(r'Pot E eV')
 
 def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z, \
-            limits, line_limits, shift_table, pair_table, edif_min, edif_max, edge):
+            limits, line_limits, shift_table, edif_min, edif_max, edge):
     
     
     top_indices     =   layer_indices_f[-2:]
@@ -438,7 +438,7 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
 
 
 def plot_il(ax, N, positions, layer_indices_f, \
-            limits, pair_table, il_dist):
+            limits, il_dist):
     
     
     xdata       =   positions[:,0]

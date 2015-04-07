@@ -7,7 +7,7 @@ Created on 26.1.2015
 import matplotlib.pyplot as plt
 import numpy as np
 from aid.help import get_fileName, get_traj_and_ef, find_layers
-from aid.help3 import get_shifts, get_shifts2
+from aid.help3 import get_shifts#, get_shifts2
 from find_angles import get_angle_set, plot_atoms, plot_KC_atoms, \
         plot_x_shift, plot_atoms2, plot_atoms3
 from ase.io.trajectory import PickleTrajectory
@@ -23,6 +23,7 @@ edge    =   'arm'
 bond    =   1.39695    
 
 view_fit    =   False
+taito       =   False
 
 fig_width_pt    =   650 #200.0 #550 #150
 
@@ -142,12 +143,20 @@ def plot_KCi(Ns):
         os.system('rm -f %spic*.png' %path)
     
 
-def plot_KC_and_lines(Ns):
+def plot_KC_and_lines(Ns, T):
+    
+    if T == 0:
+        indent = 'fixTop'
+    elif T == 10:
+        indent = 'fixTop_T=10'
+
     
     for N in Ns:
         
-        mdfile, mdLogFile, plotlogfile, plotKClog       =   get_fileName(N, 'fixTop', v, edge)[:4]
-        cmdfile, cmdLogFile, cplotlogfile, cplotKClog   =   get_fileName(N, 'fixTop', v, edge, 'cont_bend')[:4]
+        mdfile, mdLogFile, plotlogfile, plotKClog, plotShiftlog, plotIlDistlog \
+                            =   get_fileName(N, indent, taito, v, edge)[:6]
+        cmdfile, cmdLogFile, cplotlogfile, cplotKClog, cplotShiftlog, cplotIlDistlog \
+                            =   get_fileName(N, indent, taito, v, edge, 'cont_bend')[:6]
         
         path    =   '/space/tohekorh/BendAndSlide/pictures/anims/'
         
@@ -159,20 +168,34 @@ def plot_KC_and_lines(Ns):
         if conc:
             plotKClog   =   cplotKClog
             plotlogfile =   cplotlogfile
-        
+            plotShiftlog=   cplotShiftlog
+            plotIlDistlog=  cplotIlDistlog 
+               
         if os.path.isfile(plotKClog + '.npy'):
             e_KC_ti     =   np.load(plotKClog + '.npy')
         else:
-            print 'no data'
-            raise
+            print 'no data KC'
+            e_KC_ti     =   get_KC(traj)
+            np.save(plotKClog, e_KC_ti)
         
         if os.path.isfile(plotlogfile):
             plotLog     =   np.loadtxt(plotlogfile)
         else:
-            print 'no data'
-            raise
+            print 'no plot log'
+            angles_av, plotLog      =   get_angle_set(positions_t, indent = 'fixTop', \
+                                                      round_kink = True)
+            np.savetxt(plotlogfile, plotLog)
         
-       
+        
+        if os.path.isfile(plotShiftlog + '.npy'):
+            x_shift_t   =   np.loadtxt(plotShiftlog + '.npy')
+            il_dist_t   =   np.loadtxt(plotIlDistlog + '.npy')
+        else:
+            print 'no shift log'
+            x_shift_t, il_dist_t    =   get_shifts(traj, positions_t)
+            np.save(plotShiftlog, x_shift_t)
+            np.save(plotIlDistlog, il_dist_t)
+               
         
         m           =   0
         nimages     =   400
@@ -180,10 +203,13 @@ def plot_KC_and_lines(Ns):
         if nimages < len(ef):
             x       =   max(int(len(ef)/nimages), 2)
             m       =   int(len(ef)/x)
+            
             efn     =   np.zeros((m, len(ef[0])))
             plotLogn=   np.zeros((m, len(plotLog[0])))
             e_KC_n  =   np.empty(m, dtype = 'object')
             positions_tn    =   np.empty(m, dtype = 'object')
+            x_shift_tn      =   np.empty(m, dtype = 'object')
+            il_dist_tn      =   np.empty(m, dtype = 'object')
             
             ntraj   =   []
             
@@ -193,13 +219,21 @@ def plot_KC_and_lines(Ns):
                 plotLogn[i,:]   =   plotLog[i*x]
                 e_KC_n[i]       =   e_KC_ti[i*x]
                 positions_tn[i] =   positions_t[i*x]
+                x_shift_tn[i]   =   x_shift_t[i*x]
+                il_dist_tn[i]   =   il_dist_t[i*x]
+                
+                
             ef      =   efn
             traj    =   ntraj
             plotLog =   plotLogn
             e_KC_ti =   e_KC_n
             positions_t =   positions_tn
+            x_shift_t   =   x_shift_tn
+            il_dist_t   =   il_dist_tn
+ 
+ 
         
-        x_shift, il_dist_t, pair_table, lims_sep =   get_shifts2(traj)
+        #x_shift, il_dist_t  =   get_shifts(traj, positions_t)
         
         #ia_sep              =   get_il_separation(pair_table, positions_t)
         
@@ -238,7 +272,7 @@ def plot_KC_and_lines(Ns):
         
         ymax_plot   =   ymax + (ymax - ymin)/3
         
-        limits      =   [xmin, xmax, ymin, ymax_plot, lims_sep[0], lims_sep[1]]
+        limits      =   [xmin, xmax, ymin, ymax_plot, 3.2, 3.6]
         maxE        =   0.
         minE        =   1000.
         maxS        =   0.
@@ -247,8 +281,8 @@ def plot_KC_and_lines(Ns):
         for k in range(len(traj)):
             test_maxE   =   np.max(np.abs(e_KC_ti[k] - e_KC_ti[0]))
             test_minE   =   np.min(np.abs(e_KC_ti[k] - e_KC_ti[0]))
-            test_maxS   =   np.max(x_shift[k][:,-2])
-            test_minS   =   np.min(x_shift[k][:,-2])
+            test_maxS   =   np.max(x_shift_t[k][:,-2])
+            test_minS   =   np.min(x_shift_t[k][:,-2])
             
             if maxE < test_maxE:
                 maxE    =   test_maxE 
@@ -275,7 +309,7 @@ def plot_KC_and_lines(Ns):
             
             plot_atoms3(positions_t, angles, angles_av, Rads, z0s, x0s, yav_p, ep, \
                         N, edge, z, bond, k, minE, maxE, limits, line_limits, e_KC, \
-                        x_shift[k], pair_table, il_dist_t[k], path_to_fig)
+                        x_shift_t[k], il_dist_t[k], path_to_fig)
             
             print k
         
@@ -284,7 +318,7 @@ def plot_KC_and_lines(Ns):
         
         #mencoder "mf://pic*.png" -mf type=png:fps=10 -ovc lavc -lavcopts vcodec=wmv2 -oac copy -o video_N=.mpg
         os.system('mencoder "mf://%spic*.png" -mf type=png:fps=10  \
-            -ovc lavc -lavcopts vcodec=wmv2 -oac copy -o %svideo_N=%i.mpg' %(path, path, N)) 
+            -ovc lavc -lavcopts vcodec=wmv2 -oac copy -o %svideo_T=%i_N=%i.mpg' %(path, path, T, N)) 
         os.system('rm -f %spic*.png' %path)   
     
 
@@ -491,7 +525,7 @@ def plot_lines(Ns):
 #analyze_corrugation([6])
 #plot_KCi([12]) #,7,8,9,10,11,12,13,14,15,16,17])
 #plot_lines([8])
-plot_KC_and_lines([8])
+plot_KC_and_lines([4], T = 0)
 '''
 
 # TEST

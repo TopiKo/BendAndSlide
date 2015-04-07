@@ -21,9 +21,11 @@ from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
 import sys
 
-#N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
+N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
 
-N, v, M, edge, ncores   =   3, 1.,  10000, 'zz', 2 
+#N, v, M, edge, ncores   =   3, 1.,  10000, 'zz', 2 
+taito       =   False
+
 
 # fixed parameters
 bond        =   1.39695
@@ -50,7 +52,7 @@ def run_moldy(N, save = False):
     params      =   {'bond':bond, 'a':a, 'h':h}
     
     # DEFINE FILES
-    mdfile, mdlogfile, mdrelax = get_fileName(N, 'tear_E_rebo+KC_v', v, edge)  
+    mdfile, mdlogfile, mdrelax  =   get_fileName(N, 'tear_E_rebo+KC_v', taito, v, edge)  
     
     # GRAPHENE SLAB
     atoms               =   make_graphene_slab(a,h,width,length,N, \
@@ -156,14 +158,19 @@ def run_moldy(N, save = False):
                     else:
                         stringi += '%.12f ' %d
                 
-                if T != 0 and i*dt == tau:
-                    log_f.write('# Thermalization complete. ' +  '\n')
                 log_f.write(stringi +  '\n')
                 log_f.close()
                   
 
             n += 1
         
+        
+        if save and T != 0 and i*dt == tau:
+            log_f   =   open(mdlogfile, 'a')
+            log_f.write('# Thermalization complete. ' +  '\n')
+            log_f.close()
+            
+            
         if 1e2 <= M:    
             if i%(int(M/100)) == 0: print 'ready = %.1f' %(i/(int(M/100))) + '%' 
     

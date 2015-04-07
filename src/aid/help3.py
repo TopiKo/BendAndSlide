@@ -7,7 +7,7 @@ import numpy as np
 from aid.help import find_layers, get_pairs, get_pairs2
 from aid.help2 import extend_structure, local_normal, nrst_neigh
 
-def get_shifts(traj):
+def get_shifts_old(traj):
     
     Rpix            =   np.array([[1,0,0], [0,1,-1],[0,1,1]])
     Rpiy            =   np.array([[1,0,1], [0,1,0], [-1,0,1]])
@@ -94,26 +94,24 @@ def get_shifts(traj):
        
 
 
-def get_shifts2(traj):
-    
-    Rpix            =   np.array([[1,0,0], [0,1,-1],[0,1,1]])
+def get_shifts(traj, positions_t):
     
     pair_table      =   get_pairs2(traj[0])[0]
     posits_ext      =   extend_structure(traj[0].positions.copy(), \
-                                             traj[0].get_pbc(), \
-                                             traj[0].get_cell().diagonal())
+                                         traj[0].get_pbc(), \
+                                         traj[0].get_cell().diagonal())
     layer_neighbors =   nrst_neigh(traj[0].positions, posits_ext, 'layer')    
     layer_indices_f =   find_layers(traj[0].positions)[1]
     #layer_indices   =   layer_indices_f[:-3]
     
-    minL, maxL      =   1000., -1 
+    # minL, maxL      =   1000., -1 
     x_shift         =   np.empty(len(traj), dtype = 'object')
     il_dist_t       =   np.empty(len(traj), dtype = 'object')
     
     for ti, atoms in enumerate(traj):
         pav         =   []
         il_dist     =   []
-        positions   =   atoms.positions
+        positions   =   positions_t[ti]
         posits_ext  =   extend_structure(positions.copy(), atoms.get_pbc(), atoms.get_cell().diagonal())
         print ti
         
@@ -191,15 +189,16 @@ def get_shifts2(traj):
             il_dist_n[i,2]  =   il_dist[i][2]
 
         
-        if maxL < np.max(il_dist_n[:,2]):
-            maxL    =   np.max(il_dist_n[:,2])
-        if minL > np.min(il_dist_n[:,2]):
-            minL    =   np.min(il_dist_n[:,2])
-
+        #if maxL < np.max(il_dist_n[:,2]):
+        #    maxL    =   np.max(il_dist_n[:,2])
+        #if minL > np.min(il_dist_n[:,2]):
+        #    minL    =   np.min(il_dist_n[:,2])
+            
+            
         x_shift[ti]     =   pav_n
         il_dist_t[ti]   =   il_dist_n
         
-    return x_shift, il_dist_t, pair_table, [minL, maxL]
+    return x_shift, il_dist_t #,  [minL, maxL]
        
     
         
