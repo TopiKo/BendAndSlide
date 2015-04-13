@@ -12,6 +12,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from matplotlib import gridspec
+import matplotlib.colors as mcolors
 
 def kink_func(xs,*args):
     
@@ -103,7 +104,6 @@ def plot_KC_atoms(atoms, e_KC, layer_indices, edif_max, limits, path_to_fig):
     plt.savefig(path_to_fig, dpi = 100)
     #plt.show()
     
-
 def plot_atoms2(positions_t, angles_t, angles_av_t, Rads_t, \
                z0s_t, x0s_t, yav_t, ep, N, edge, z_t, bond, iz, \
                edif_min, edif_max, limits, line_limits, e_KC, shift_table, \
@@ -260,25 +260,27 @@ def plot_atoms2(positions_t, angles_t, angles_av_t, Rads_t, \
     plt.clf()
     plt.close()
 
-
 def plot_atoms3(positions_t, angles_t, angles_av_t, Rads_t, \
-               z0s_t, x0s_t, yav_t, ep, N, edge, z_t, bond, iz, \
+               z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, z_t, bond, iz, \
                edif_min, edif_max, limits, line_limits, e_KC, shift_table, \
                il_dist, path_to_fig):
     
     
-    fig2=   plt.subplots(figsize = (10,18))
+    fig2    =   plt.subplots(figsize = (6,12))
     
-    gs  = gridspec.GridSpec(5, 1, height_ratios=[2, 2, 1, 1, 1]) 
-    ax1 = plt.subplot(gs[0])
-    ax5 = plt.subplot(gs[1])
-    ax4 = plt.subplot(gs[2])
-    ax2 = plt.subplot(gs[3])
-    ax3 = plt.subplot(gs[4])
+    gs      =   gridspec.GridSpec(4, 1, height_ratios=[2, 2, 2, 1]) 
+    #gs      =   gridspec.GridSpec(3, 1, height_ratios=[2, 2, 1]) 
+
+    ax1     =   plt.subplot(gs[0])
+    ax2     =   plt.subplot(gs[1])
+    ax3     =   plt.subplot(gs[2])
+    ax4     =   plt.subplot(gs[3])
+    #ax5     =   plt.subplot(gs[4])
+    #ax6     =   plt.subplot(gs[5])
     
-    layer_indices_f =   find_layers(positions_t[0])[1]
-    
-    positions       =   positions_t[iz]   
+    layer_indices_f \
+                =   find_layers(positions_t[0])[1]
+    positions   =   positions_t[iz]   
     angles  =   angles_t[iz]
     Rads    =   Rads_t[iz]
     z0s     =   z0s_t[iz]
@@ -288,23 +290,25 @@ def plot_atoms3(positions_t, angles_t, angles_av_t, Rads_t, \
 
     ########################
     plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z, \
-            limits, line_limits, shift_table, edif_min, edif_max, edge)
+            limits, line_limits, shift_table, edif_min, edif_max, edge, bond)
     
-    plot_il(ax5, N, positions, layer_indices_f, limits, il_dist)
+    plot_il(ax2, N, positions, layer_indices_f, limits, il_dist)
     
+    plot_streches(ax3, strech_t[iz], limits)
     
-    plot_angle_epot(ax2, ep, z_t, angles_av_t, iz, line_limits)
+    plot_corrugation(ax4, shift_table, bond, limits, line_limits, edge)
+    
+    #plot_shift_Y(ax5, z_t, yav_t, iz, line_limits)
+    
+    #plot_angle_epot(ax6, ep, z_t, angles_av_t, iz, line_limits)
 
-    plot_shift_Y(ax3, z_t, yav_t, iz, line_limits)
-    
-    plot_corrugation(ax4, shift_table, bond, line_limits, edge)
         
-    plt.savefig(path_to_fig, dpi = 100)
+    plt.savefig(path_to_fig, dpi = 125)
     
     plt.clf()
     plt.close()
 
-def plot_corrugation(ax, shift_table, bond, line_limits, edge):
+def plot_corrugation(ax, shift_table, bond, limits, line_limits, edge):
     
     xs      =   shift_table[:,1]
     shifts  =   shift_table[:,-2]
@@ -319,6 +323,8 @@ def plot_corrugation(ax, shift_table, bond, line_limits, edge):
     
         
     ax.set_ylim(line_limits[8] - 1, line_limits[9] + 1)
+    ax.set_xlim(limits[0] - 1, limits[1] + 1)
+    
     # END CORRUGATION
 
 def plot_shift_Y(ax, z_t, yav_t, iz, line_limits):
@@ -349,10 +355,9 @@ def plot_angle_epot(ax, ep, z_t, angles_av_t, iz, line_limits):
     ax2a.set_ylabel(r'Pot E eV')
 
 def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z, \
-            limits, line_limits, shift_table, edif_min, edif_max, edge):
+            limits, line_limits, shift_table, edif_min, edif_max, edge, bond):
     
     
-    top_indices     =   layer_indices_f[-2:]
     layer_indices   =   layer_indices_f[:-2]
 
     n           =   len(layer_indices) 
@@ -364,11 +369,7 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
     xsets       =   np.zeros((1000, len(layer_indices)))
 
     
-    #angles  =   angles_t[iz]
-    #Rads    =   Rads_t[iz]
-    #z0s     =   z0s_t[iz]
-    #x0s     =   x0s_t[iz]
-    #z       =   z_t[iz]        
+           
     for i in range(n):
         x_min   =   np.min(xdata[layer_indices[i]])
         x_max   =   np.max(xdata[layer_indices[i]])
@@ -383,32 +384,73 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
     
     
     
-    orig_map    =   mpl.cm.seismic
-    shift_cmap  =   shiftedColorMap(orig_map, start=0.3, midpoint=.1, stop=1., name='shrunk')    
+    if edge == 'arm':   smax_min    =   3*bond + 1
+    elif edge == 'zz':  smax_min    =   np.sqrt(3)*bond*3 + 1
+    
+    smin        =   line_limits[8]
+    smax        =   np.max([smax_min, line_limits[9]])
+    s_range     =   smax - smin
+    
+    mid_p       =   np.abs(smin)/s_range
+    
+    c           =   mcolors.ColorConverter().to_rgb
+    
+    
+    if edge == 'arm':
+        b_r     =   bond/s_range
+    elif edge == 'zz':
+        b_r     =   np.sqrt(3)*bond/s_range
+    
+    cset        =   [mid_p, mid_p+b_r, mid_p+2*b_r, mid_p+3*b_r]
+    
+    shift_cmap  =   make_colormap([c('blue'), c('white'), cset[0], c('white'), c('green'), \
+                                   cset[1], c('green'), c('red'), cset[2], c('red'), \
+                                   c('violet'), cset[3], c('violet'), c('black')])
+    
+    #orig_map    =   mpl.cm.seismic
+    #shift_cmap  =   shiftedColorMap(orig_map, start=0., midpoint=mid_p, stop=1., name='shrunk')    
+    '''
     Z           =   [[0,0],[0,0]]
-    levels      =   np.linspace(line_limits[8] - .1, line_limits[9] + .1, 1000) 
+    levels      =   np.linspace(smin, smax, 1000) 
     
     
-    cNorm       =   colors.Normalize(vmin=-1, vmax=6)
+    cNorm       =   colors.Normalize(vmin=0, vmax=1)
     scalarMap   =   cmx.ScalarMappable(norm=cNorm, cmap=shift_cmap)
     shift_xs    =   shift_table #[:,2]
+    
+    
     
     
     for table in shift_xs:
         x0      =   [table[0], table[1]]
         y0      =   [table[2], table[3]]
         corr    =   table[4]
-        colorVal = scalarMap.to_rgba(corr)
-        ax1.plot(x0, y0, alpha = 1, lw = 1, color=colorVal)
         
+        val     =   (corr - smin)/s_range
+        
+        colorVal    =   scalarMap.to_rgba(val)
+        ax1.plot(x0, y0, alpha = 1, lw = 1, color=colorVal)
+    '''    
    
     # COLOR PLOT
     s0          =   10
     #s           =   [s0 + e_KC[i]/edif_max*s0**np.sqrt(1.5) for i in range(len(xdata))]
     
-    for i in range(n):
-        ax1.plot(xsets[:,i], zsets[:,i], alpha = .3,  color = 'black')
+    # Plot fits..
+    #for i in range(n):
+    #    ax1.plot(xsets[:,i], zsets[:,i], alpha = .3,  color = 'black')
         
+    #
+    x_av        =   (shift_table[:,0] + shift_table[:,1])/2.
+    y_av        =   (shift_table[:,2] + shift_table[:,3])/2.
+    corr        =   shift_table[:,4]
+    
+    
+    axg         =   ax1.scatter(x_av, y_av, c = corr, s = s0, cmap = shift_cmap, \
+                                vmin=smin, vmax = smax, edgecolors = 'none')
+    #
+    
+    
     axf         =   ax1.scatter(xdata, ydata, c=e_KC, s=s0, cmap=mpl.cm.RdBu_r, \
                                vmin=edif_min, vmax=edif_max, edgecolors='none', zorder = 10000)
     
@@ -426,9 +468,11 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
     cbar3       =   plt.colorbar(axf, cax=cax3, orientation = 'horizontal',\
                                   ticks = np.linspace(edif_min, edif_max, 5))
     
-    axf2        =   plt.contourf(Z, levels, cmap=shift_cmap)
-    cbar4       =   plt.colorbar(axf2, cax=cax4, \
-                                 ticks = np.linspace(line_limits[8], line_limits[9], 5)) #CS3, cax=cax4, norm=cNorm, orientation='vertical')
+    #axf2        =   plt.contourf(Z, levels, cmap=shift_cmap)
+    cbar4       =   plt.colorbar(axg, cax=cax4, \
+                                 ticks = [smin, 0., bond, 2*bond, 3*bond]) #CS3, cax=cax4, norm=cNorm, orientation='vertical')
+    
+    cbar4.ax.set_yticklabels(['min', '0', '1. st', '2. nd', '3. th'])
     
     ax1.set_title(r'KC-energy eV, edge=%s, N=%i' %(edge, N))
     y_scale =   limits[3] - limits[2]
@@ -478,7 +522,107 @@ def plot_il(ax, N, positions, layer_indices_f, \
     ax.set_title(r'Interlayer distance')
     ax.axis('off')
     #################
+
+def plot_streches(ax, streches, limits):
     
+    
+    xdata       =   streches[:,0]
+    ydata       =   streches[:,1]
+
+    strech_av   =   np.zeros(len(streches))
+    
+    for i in range(len(streches)):
+        n   =   0
+        for k in range(3):
+            if 1.2 < streches[i, 2 + k] < 1.8: 
+                strech_av[i]  +=   streches[i, 2 + k]
+                n   +=  1
+        if n != 0:
+            strech_av[i]    /= n   
+            
+
+    strech_avS  =   1.39695   #np.average(strech_av)
+    strech_min, strech_max  =   strech_avS*0.99, strech_avS*1.01    
+
+    
+    #xpoint  =   il_dist[:,0]
+    #ypoint  =   il_dist[:,1]
+    #ilh     =   il_dist[:,2]
+    
+    s0      =   10
+    ratio   =   (strech_avS - strech_min)/(strech_max - strech_min)
+    
+    orig_map    =   mpl.cm.RdBu_r
+    rvb = shiftedColorMap(orig_map, start=0., midpoint=ratio, stop=1., name='shrunk')    
+    
+    #ax.scatter(xdata, ydata, s=s0, edgecolors='none', \
+    #           color = 'black', alpha = .4, zorder = -1)
+    
+    ax2         =   ax.scatter(xdata, ydata, c=strech_av, s=s0*1.5, cmap=rvb, \
+                               vmin=strech_min, vmax=strech_max, edgecolors='none')
+    
+    ax.set_ylim(limits[2], limits[3])
+    ax.set_aspect('equal') 
+    
+    divider3    =   make_axes_locatable(ax)
+    
+    cax3        =   divider3.append_axes("right", size="5%", pad=0.5)
+    
+    cbar3       =   plt.colorbar(ax2, cax=cax3, orientation = 'vertical',\
+                                  ticks = np.linspace(strech_min, strech_max, 5))
+    
+    cbar3.ax.set_yticklabels(['-1%', '-0.5%', 'Gr', '+0.5%', '+1%'])
+    ax.set_title(r'Average bond lengths')
+    ax.axis('off')
+    #################
+    
+
+def plot_plotLogAtoms(positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, \
+            limits, edif_min, edif_max):
+    
+    ax1         =   plt.subplot(111)
+    layer_indices   =   layer_indices_f[:-2]
+
+    n           =   len(layer_indices) 
+    angles_av   =   0.
+    xdata       =   positions[:,0]
+    ydata       =   positions[:,2]
+    zsets       =   np.zeros((1000, len(layer_indices)))
+    xsets       =   np.zeros((1000, len(layer_indices)))
+    
+    for i in range(n):
+        x_min   =   np.min(xdata[layer_indices[i]])
+        x_max   =   np.max(xdata[layer_indices[i]])
+        
+        xsets[:,i]      =   np.linspace(x_min, x_max, 1000)
+        
+        R, phi, z0, x0  =   Rads[i], angles[i]/360.*2*np.pi, z0s[i], x0s[i] #par_set[j, i]
+        
+        zsets[:,i]      =   kink_func2(xsets[:,i], R, phi, z0, x0)
+        
+        angles_av  +=   angles[i]/n   
+    
+    
+    s0  =   10
+    
+    axf         =   ax1.scatter(xdata, ydata, c=e_KC, s=s0, cmap=mpl.cm.RdBu_r, \
+                               vmin=edif_min, vmax=edif_max, edgecolors='none', zorder = -10000)
+
+    for i in range(n):
+        ax1.plot(xsets[:,i], zsets[:,i], alpha = 1.3,  color = 'black')
+    
+    print xsets[:,i], zsets[:,i]
+    
+    ax1.set_ylim(limits[2], limits[3])
+    ax1.set_aspect('equal') 
+    divider3    =   make_axes_locatable(ax1)
+    
+    cax3        =   divider3.append_axes("right", size="5%", pad=0.05)
+    
+    cbar3       =   plt.colorbar(axf, cax=cax3, orientation = 'vertical',\
+                                  ticks = np.linspace(edif_min, edif_max, 5))
+    
+    plt.show()
 
 def plot_atoms(axs, traj_init, traj_c, angles_t, angles_av_t, Rads_t, \
                z0s_t, x0s_t, yav_t, ep, N, edge, z_t, bond, iz):

@@ -17,19 +17,20 @@ from aid.help import saveAndPrint, get_fileName
 from atom_groups import get_ind
 from ase.md.langevin import Langevin
 #from aid.my_constraint import add_adhesion, KC_potential
-from aid.KC_potential_constraint import KC_potential
+from ase.optimize import BFGS
+#from aid.KC_potential_constraint import KC_potential
 from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution as mbd
 import sys
 
-N, v, M, edge, release, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
-                                    int(sys.argv[3]), sys.argv[4], \
-                                    sys.argv[5] in ['True', 'true', 1], int(sys.argv[6]) 
+#N, v, M, edge, release, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
+#                                    int(sys.argv[3]), sys.argv[4], \
+#                                    sys.argv[5] in ['True', 'true', 1], int(sys.argv[6]) 
 
-#N, v, M, edge, release, ncores   =   15, 1., 10000, 'arm', False, 2
+N, v, M, edge, release, ncores   =   8, 1., 10000, 'arm', True, 2
+
 taito       =   False
-print sys.argv[5]
-print bool(sys.argv[5])
   
 
 # fixed parameters
@@ -48,7 +49,7 @@ tau         =   10./fric
 T           =   0.              # temperature
 interval    =   10              # interval for writing stuff down
 
-n_begin     =   -1
+n_begin     =   500
 
 def run_moldy(N, save = False):
     
@@ -57,8 +58,6 @@ def run_moldy(N, save = False):
     elif not release:
         cont_type = 'cont_bend'
 
-    
-    print release, cont_type    
     params              =   {'bond':bond, 'a':a, 'h':h}
     
     # DEFINE FILES
@@ -66,6 +65,7 @@ def run_moldy(N, save = False):
 #    mdfile, mdlogfile   =   get_fileName(N, 'tear_E_rebo+KC_v', v, edge, cont_type)[:2]    
     mdfile_read         =   get_fileName(N, 'fixTop', taito, v, edge)[0]  
     mdfile, mdlogfile   =   get_fileName(N, 'fixTop', taito, v, edge, cont_type)[:2]    
+    mdrelax             =   get_fileName(N, 'fixTop', taito, v, edge, cont_type)[-1]    
 
 
     # GRAPHENE SLAB
@@ -80,8 +80,8 @@ def run_moldy(N, save = False):
     params['chemical_symbols']  =   atoms.get_chemical_symbols()
     
     # FIX
-    constraints         =   []
-    constraints_init    =   []
+    #constraints         =   []
+    #constraints_init    =   []
     
     left        =   get_ind(atoms.positions.copy(), 'left', 2, bond)
     top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
@@ -89,14 +89,13 @@ def run_moldy(N, save = False):
     
     # use initial atoms to obtain fixes
     if not release:
-        atoms       =   traj[-1]
+        atoms   =   traj[-1]
     elif release:
-        atoms       =   traj[n_begin]
+        atoms   =   traj[n_begin]
         
-    cell_h      =   atoms.get_cell()[2,2]
-    zmax        =   np.max(atoms.positions[top,2])
-    
     if not release:
+        cell_h  =   atoms.get_cell()[2,2]
+        zmax    =   np.max(atoms.positions[top,2])
         atoms.translate([0.,0., cell_h - zmax - 10])
     
     fix_left    =   FixAtoms(indices = left)
@@ -105,18 +104,41 @@ def run_moldy(N, save = False):
     add_kc      =   KC_potential_p(params)
 
     
-    if not release:
-        for ind in rend:
-            fix_deform  =   FixedPlane(ind, (0., 0., 1.))
-            constraints.append(fix_deform)
-    if release and T != 0:
-        for ind in rend:
-            fix_deform  =   FixedPlane(ind, (0., 0., 1.))
-            constraints_init.append(fix_deform)
-    
+    constraints =   []
+    constraints_def =   []
+
+    constraints.append(add_kc)
     constraints.append(fix_left)
     constraints.append(fix_top)
-    constraints.append(add_kc)
+    
+    for ind in rend:
+        fix_deform  =   FixedPlane(ind, (0., 0., 1.))
+        constraints_def.append(fix_deform)
+    
+    if release:
+        constraints_simul   =   constraints[:]
+        for const in constraints_def:
+            constraints.append(const)
+        constraints_init    =   constraints
+        
+    elif not release:
+        for const in constraints_def:
+            constraints.append(const)
+        constraints_simul   =   constraints
+        
+   
+    atoms.set_constraint(constraints_init)
+    
+    #if not release:
+    #    for ind in rend:
+    #        fix_deform  =   FixedPlane(ind, (0., 0., 1.))
+    #        constraints.append(fix_deform)
+    #if release and T != 0:
+    #    for ind in rend:
+    #        fix_deform  =   FixedPlane(ind, (0., 0., 1.))
+    #        constraints_init.append(fix_deform)
+    
+    
     # END FIX
     
     # CALCULATOR LAMMPS 
@@ -140,14 +162,31 @@ def run_moldy(N, save = False):
     view(atoms)
     
     # FIX 
-    if T != 0:
-        constraints_therm   =   []
-        for const in constraints:
-            constraints_therm.append(const)
-        for const in constraints_init:
-            constraints_therm.append(const)
+    #if T != 0:
+    #    constraints_therm   =   []
+    #    for const in constraints:
+    #        constraints_therm.append(const)
+    #    for const in constraints_init:
+    #        constraints_therm.append(const)
     
-    atoms.set_constraint(constraints_therm)
+    #    atoms.set_constraint(constraints_therm)
+    #else: atoms.set_constraint(constraints)
+        
+    
+    
+    
+    if release:
+        dyn     =   BFGS(atoms, trajectory = mdrelax)
+        dyn.run(fmax=0.05)
+        if T == 0:
+            del atoms.constraints
+            atoms.set_constraint(constraints_simul)
+        
+        
+    if T != 0:
+        # put initial MaxwellBoltzmann velocity distribution
+        mbd(atoms, T*units.kB)
+        
     
     # DYNAMICS
     dyn     =   Langevin(atoms, dt*units.fs, T*units.kB, fric)
@@ -160,37 +199,42 @@ def run_moldy(N, save = False):
     
     print 'Start the dynamics for N = %i' %N
     
-    
-    
     for i in range(0, M):
         
 
-        if not release:
-            if T != 0.:
-                if i*dt < tau:
-                    dyn.run(1)
-                elif tau <= i*dt:
-                    for ind in rend:
-                        atoms[ind].position[2] -= dz 
-                    dyn.run(1)
-            elif T == 0:
-                for ind in rend:
-                    atoms[ind].position[2] -= dz 
-                dyn.run(1)
-        elif release:
+        if release:
             if T != 0.:
                 if i*dt == tau:
                     # ensure empty constraints
                     del atoms.constraints
                     # add the desired constraints
-                    atoms.set_constraint(constraints)
+                    atoms.set_constraint(constraints_simul)
+            dyn.run(1)
+        
+        elif not release:
+            if T != 0.:
+                if tau <= i*dt:
+                    for ind in rend:
+                        atoms[ind].position[2] -= dz 
+                
+            elif T == 0:
+                for ind in rend:
+                    atoms[ind].position[2] -= dz 
+            
             dyn.run(1)
                 
         
         if i%interval == 0:
             
             epot, ekin  =   saveAndPrint(atoms, traj, False)[:2]
-            data        =   [i*dt, i*dz, epot, ekin, epot + ekin]
+            
+            if T != 0:
+                if tau < i*dt:  hw   =   i*dz - tau*v
+                else: hw    =   0
+            else:   hw      = i*dz
+            
+            data        =   [i*dt, hw, epot, ekin, epot + ekin]
+            
             
             if save:
                 log_f   =   open(mdlogfile, 'a')

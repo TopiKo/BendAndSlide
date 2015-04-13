@@ -7,14 +7,15 @@
 import numpy as np
 from help2 import extend_structure, nrst_neigh, map_seq, map_rj, local_normal, which_layer #, map_rjs
 from aid.help import find_layers
-#from math import sqrt
 from numpy import zeros, exp, dot, sqrt
-from threading import Thread
-from threading import Semaphore
 import array
 import scipy
 import time
 import multiprocessing
+
+# Taidolla taytyy lisata ->
+# os.system("taskset -p 0xff %d" % os.getpid())
+# ks. http://bugs.python.org/issue17038#msg180663
 
 def gradN(ri, ind_bot, positions, pbc, cell, layer_neighbors, take_t = False):
     # Matrix

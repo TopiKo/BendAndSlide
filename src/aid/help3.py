@@ -200,5 +200,28 @@ def get_shifts(traj, positions_t):
         
     return x_shift, il_dist_t #,  [minL, maxL]
        
+def get_streches(traj, positions_t): 
     
+    strech_t        =   np.empty(len(traj), dtype = 'object')
+    
+    posits_ext      =   extend_structure(traj[0].positions.copy(), \
+                                         traj[0].get_pbc(), \
+                                         traj[0].get_cell().diagonal())
+    layer_neighbors =   nrst_neigh(traj[0].positions, posits_ext, 'layer')    
+    
+    
+    pbc, cell       =   traj[0].get_pbc(), traj[0].get_cell().diagonal()
+    
+    for i, positions in enumerate(positions_t):
+        strech_t[i] =   np.zeros((len(positions), 5))
+        posits_ext  =   extend_structure(positions.copy(), pbc, cell)
         
+        for ir, r in enumerate(positions):
+            tang_vec    =   posits_ext[layer_neighbors[ir]] - r
+            strech_t[i][ir, 0]  =   r[0] # x
+            strech_t[i][ir, 1]  =   r[2] # 'y'
+            
+            for k, tv in enumerate(tang_vec):
+                strech_t[i][ir, k + 2]  =   np.linalg.norm(tv)
+                
+    return strech_t

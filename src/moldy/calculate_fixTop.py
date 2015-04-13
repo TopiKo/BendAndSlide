@@ -16,12 +16,13 @@ from ase.io.trajectory import PickleTrajectory
 from aid.help import make_graphene_slab, saveAndPrint, get_fileName
 from atom_groups import get_ind
 from ase.md.langevin import Langevin
-from aid.KC_potential_constraint import KC_potential
 from aid.KC_parallel import KC_potential_p
 from ase.visualize import view 
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution as mbd
 import sys
 
-N, v, M, edge, ncores   =   int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4], int(sys.argv[5])
+N, v, M, edge, stack, T, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
+            int(sys.argv[3]), sys.argv[4], sys.argv[5], float(sys.argv[6]), int(sys.argv[7])
 
 #N, v, M, edge, ncores   =   3, 1.,  10000, 'zz', 2 
 taito       =   False
@@ -32,7 +33,7 @@ bond        =   1.39695
 a           =   np.sqrt(3)*bond # 2.462
 h           =   3.3705 
 dt          =   2               # units: fs
-length      =   4*14 #16            # slab length has to be integer*2
+length      =   4*14 #14 #16        # slab length has to be integer*2
 width       =   1               # slab width
 fixtop      =   2               #
 
@@ -41,10 +42,9 @@ dt          =   2               # fs
 dz          =   dt*v/1000.      # d/M  
 fric        =   0.002
 
-tau         =   10./fric
-T           =   0.       # ~10K       # temperature
+tau         =   10./fric/5      
+T           =   10.       # ~10K       # temperature
 interval    =   10              # interval for writing stuff down
-    
 
 def run_moldy(N, save = False):
     
@@ -56,8 +56,11 @@ def run_moldy(N, save = False):
     
     # GRAPHENE SLAB
     atoms               =   make_graphene_slab(a,h,width,length,N, \
-                                               edge_type = edge, h_pass = True)[3]
+                                               edge_type = edge, h_pass = True, \
+                                               stacking = 'abc')[3]
+    
     view(atoms)
+    exit()
     params['ncores']    =   ncores
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
@@ -128,6 +131,11 @@ def run_moldy(N, save = False):
     log_f.write(header)            
     log_f.close()
 
+    if T != 0:
+        # put initial MaxwellBoltzmann velocity distribution
+        mbd(atoms, T*units.kB)
+    
+    
     print 'Start the dynamics for N = %i' %N
     
     for i in range(0, M):
@@ -137,6 +145,7 @@ def run_moldy(N, save = False):
                 atoms[ind].position[2] -= dz 
         elif T != 0:
             if tau < i*dt:
+                hw   =   i*dz
                 for ind in rend:
                     atoms[ind].position[2] -= dz 
             
@@ -145,7 +154,13 @@ def run_moldy(N, save = False):
         if i%interval == 0:
 
             epot, ekin  =   saveAndPrint(atoms, traj, False)[:2]
-            data        =   [i*dt, i*dz, epot, ekin, epot + ekin]
+            
+            if T != 0:
+                if tau < i*dt:  hw   =   i*dz - tau*v
+                else: hw =   0
+            else:   hw = i*dz
+                
+            data        =   [i*dt, hw, epot, ekin, epot + ekin]
             
             if save:
                 log_f   =   open(mdlogfile, 'a')

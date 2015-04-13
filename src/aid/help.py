@@ -11,7 +11,7 @@ from ase.visualize import view
 from scipy.optimize import fmin_l_bfgs_b #, fmin, minimize
 import numpy as np
 import sys
-
+import matplotlib.colors as mcolors
 import os.path
 
 def saveAndPrint(atoms, traj = None, print_dat = False):    
@@ -154,21 +154,25 @@ def make_atoms_file(atoms, address, inds_dict):
     return group_symbs, group_string
     
 
-def make_graphene_slab(a,h,x1,x2,N, \
-                       edge_type = 'arm', h_pass = False):
+def make_graphene_slab(a, h, x1, x2, N, edge_type = 'arm', h_pass = False, stacking = 'ab'):
     
+    bond        =   a/np.sqrt(3)
     
+    #if stacking == 'abc' and edge_type == 'zz':
+    #    print 'not implemented!'
+    #    raise
+        
     # make ML graphene slab
     if edge_type == 'arm':
         width   =   x1
         length  =   x2
-        pbc     =   (False, True, False)
     elif edge_type == 'zz':
         width   =   x2
         length  =   x1*2
-        pbc     =   (False, True, False)
     else:
         raise
+
+    pbc         =   (False, True, False)
     atoms       =   Graphite('C',latticeconstant=(a,2*h),size=(width,length,N) )
     
     l1,l2,l3    =   atoms.get_cell().diagonal()
@@ -193,8 +197,7 @@ def make_graphene_slab(a,h,x1,x2,N, \
         W   =   atoms.get_cell().diagonal()[1]
         H   =   (N-1)*h
         L   =   atoms.get_positions()[:,0].ptp()/2
-        atoms.center(vacuum=L,axis=0)
-
+    
     elif edge_type == 'zz':
         atoms.rotate('z', pi/2)
         atoms.set_cell( (l1,l2,l3) )
@@ -203,8 +206,61 @@ def make_graphene_slab(a,h,x1,x2,N, \
         W   =   atoms.get_cell().diagonal()[1]
         H   =   (N-1)*h
         L   =   atoms.get_positions()[:,0].ptp()/2
-        atoms.center(vacuum=L,axis=0)
     
+    atoms.center(vacuum=L,axis=0)
+
+    
+    if stacking == 'abc' and 2 < N:
+        
+        atoms_n    =   Atoms()
+        shift_vec   =   np.zeros(3)
+        if edge_type == 'arm':
+            shift_vec[0]=   bond  
+        elif edge_type == 'zz':
+            shift_vec[0]=   0  
+            shift_vec[1]=   bond #/2  
+        
+        layer_inds  =   find_layers(atoms.positions)[1]
+        
+        
+        for iinds, inds in enumerate(layer_inds[:3]):
+            if (iinds + 1)%3 == 0:
+                atoms.positions[inds]      +=   shift_vec
+                
+            atoms_n +=  Atoms('C'*len(inds), positions = atoms.positions[inds])
+        
+        posits_pack     =   atoms_n.positions    
+            
+        if N > 5:
+            posits_pack_a   =   posits_pack.copy()
+            for n in range(N/3 - 1):
+                print  (n+1)*h
+                posits_pack_a[:,2]   +=   3*h
+                atoms_n +=  Atoms('C'*len(posits_pack), positions = posits_pack_a)    
+            if N%3 != 0:
+                for m in range(N%3):
+                    posits          =   atoms.positions[layer_inds[m]]     
+                    posits[:,2]    +=   3*h*int(N/3)  
+                    atoms_n        +=   Atoms('C'*len(posits), positions = posits)    
+        elif N < 6:
+            if N%3 != 0:
+                for m in range(N%3):
+                    posits          =   atoms.positions[layer_inds[m]]     
+                    posits[:,2]    +=   3*h*int(N/3)  
+                    atoms_n        +=   Atoms('C'*len(posits), positions = posits)
+            
+        if edge_type == 'arm':
+            atoms_n.set_cell( (l2,l1,l3) )
+        elif edge_type == 'zz':
+            atoms_n.set_cell( (l1,l2,l3) )
+        
+        atoms_n.center()
+        atoms_n.center(vacuum=L,axis=0)
+        atoms_n.set_pbc([False, True, False])
+        
+        atoms   =   atoms_n
+    
+                
     atoms.center(vacuum=L,axis=2)
     print 'structure ready'
     
@@ -423,8 +479,10 @@ def get_fileName(N, indent, taito, *args):
         plotKClog   =   path_f + 'KC_log_N=%i_v=%.2f%s%s'        %(N, v, edge, cont)
         plotShiftlog=   path_f + 'Shift_log_N=%i_v=%.2f%s%s'     %(N, v, edge, cont)
         plotIlDistlog=  path_f + 'Il_dist_log_N=%i_v=%.2f%s%s'   %(N, v, edge, cont)
+        plotStrechlog=  path_f + 'Strech_log_N=%i_v=%.2f%s%s'    %(N, v, edge, cont)
         
-        return mdfile, mdlogfile, plotlogfile, plotKClog, plotShiftlog, plotIlDistlog, mdrelax
+        return mdfile, mdlogfile, plotlogfile, plotKClog, \
+            plotShiftlog, plotIlDistlog, plotStrechlog, mdrelax
     
     
     else:
@@ -568,8 +626,25 @@ def get_pairs2(atoms):
                         bots[atom_up, atom] =   1
     return bots, tops    
 
-def make_colormap(seq, alphas):
-    import matplotlib.colors as mcolors
+def make_colormap(seq):
+    """Return a LinearSegmentedColormap
+    seq: a sequence of floats and RGB-tuples. The floats should be increasing
+    and in the interval (0,1).
+    """
+    seq = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
+    cdict = {'red': [], 'green': [], 'blue': []}
+    for i, item in enumerate(seq):
+        if isinstance(item, float):
+            r1, g1, b1 = seq[i - 1]
+            r2, g2, b2 = seq[i + 1]
+            cdict['red'].append([item, r1, r2])
+            cdict['green'].append([item, g1, g2])
+            cdict['blue'].append([item, b1, b2])
+    
+    return mcolors.LinearSegmentedColormap('CustomMap', cdict)
+'''
+def make_colormap(seq, alphas = []):
+    
     
     """Return a LinearSegmentedColormap
     seq: a sequence of floats and RGB-tuples. The floats should be increasing
@@ -586,13 +661,13 @@ def make_colormap(seq, alphas):
             cdict['green'].append([item, g1, g2])
             cdict['blue'].append([item, b1, b2])
     
-        
-    for item in alphas:
-        r, alpha    =   item[0], item[1]
-        cdict['alpha'].append([r, alpha, alpha])
+    if len(alphas) != 0:
+        for item in alphas:
+            r, alpha    =   item[0], item[1]
+            cdict['alpha'].append([r, alpha, alpha])
     
     return mcolors.LinearSegmentedColormap('CustomMap', cdict)   
-
+'''
 
 
 def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):

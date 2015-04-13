@@ -17,9 +17,12 @@ from ase.visualize import view
 from get_KC_per_atom import get_KC
 import time
 
-Ns      =   [6] #[3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] #,10,11,12,13,14,15,16,17] 
+Ns      =   [8] #[3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] #,10,11,12,13,14,15,16,17] 
 v       =   1.0
 edge    =   'arm'
+T       =   0 #10
+stack   =   'ab'
+
 bond    =   1.39695    
 
 view_fit    =   False
@@ -148,7 +151,10 @@ def plot_KC_and_lines(Ns, T):
     if T == 0:
         indent = 'fixTop'
     elif T == 10:
-        indent = 'fixTop_T=10'
+        if stack == 'ab':
+            indent = 'fixTop_T=10'
+        elif stack == 'abc':
+            indent = 'fixTop_T=10_abc'
 
     
     for N in Ns:
@@ -188,8 +194,8 @@ def plot_KC_and_lines(Ns, T):
         
         
         if os.path.isfile(plotShiftlog + '.npy'):
-            x_shift_t   =   np.loadtxt(plotShiftlog + '.npy')
-            il_dist_t   =   np.loadtxt(plotIlDistlog + '.npy')
+            x_shift_t   =   np.load(plotShiftlog + '.npy')
+            il_dist_t   =   np.load(plotIlDistlog + '.npy')
         else:
             print 'no shift log'
             x_shift_t, il_dist_t    =   get_shifts(traj, positions_t)
@@ -313,8 +319,8 @@ def plot_KC_and_lines(Ns, T):
             
             print k
         
-        print 'Now sleep for 100s'
-        time.sleep(100)
+        print 'Now sleep for 10s'
+        time.sleep(10)
         
         #mencoder "mf://pic*.png" -mf type=png:fps=10 -ovc lavc -lavcopts vcodec=wmv2 -oac copy -o video_N=.mpg
         os.system('mencoder "mf://%spic*.png" -mf type=png:fps=10  \
@@ -525,7 +531,7 @@ def plot_lines(Ns):
 #analyze_corrugation([6])
 #plot_KCi([12]) #,7,8,9,10,11,12,13,14,15,16,17])
 #plot_lines([8])
-plot_KC_and_lines([4], T = 0)
+plot_KC_and_lines(Ns, T)
 '''
 
 # TEST
