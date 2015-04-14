@@ -457,7 +457,7 @@ def get_fileName(N, indent, taito, *args):
         mdlogfile   =   path_f + 'md_N=%i_v=%.2f%s%s.log'        %(N, v, edge, cont)
         return mdfile, mdlogfile, mdrelax
 
-    if indent == 'fixTop' or indent == 'fixTop_T=10':
+    if indent == 'fixTop' or indent == 'fixTop_T=10' or indent == 'fixTop_T=10_abc':
         cont        = ''
         v           =   args[0]
         edge        =   '_' + args[1]

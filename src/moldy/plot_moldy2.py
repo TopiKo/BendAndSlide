@@ -20,9 +20,8 @@ import time
 Ns      =   [8] #[3,4,5,6,7,8,9,10,11,12,13,14,15,16,17] #,10,11,12,13,14,15,16,17] 
 v       =   1.0
 edge    =   'arm'
-T       =   0
+T       =   10
 stack   =   'ab'
-
 bond    =   1.39695    
 
 view_fit    =   False
@@ -50,7 +49,6 @@ def get_datas(N, edge, taito, v, cont, nimages):
         elif stack == 'abc':
             indent = 'fixTop_T=10_abc'
 
-    
     mdfile, mdLogFile, plotlogfile, plotKClog, plotShiftlog, plotIlDistlog, plotStrechlog \
                         =   get_fileName(N, indent, taito, v, edge)[:7]
     cmdfile, cmdLogFile, cplotlogfile, cplotKClog, cplotShiftlog, cplotIlDistlog, cplotStrechlog \
@@ -87,7 +85,7 @@ def get_datas(N, edge, taito, v, cont, nimages):
                                                   round_kink = True)
         np.savetxt(plotlogfile, plotLog)
     
-    
+    view(traj[0])
     if os.path.isfile(plotShiftlog + '.npy'):
         x_shift_t   =   np.load(plotShiftlog + '.npy')
         il_dist_t   =   np.load(plotIlDistlog + '.npy')
@@ -204,7 +202,8 @@ def plot_KC_and_lines(Ns):
     for N in Ns:
         
         traj, ef, e_KC_ti, positions_t, x_shift_t, il_dist_t, strech_t, \
-            angles_av, angles, Rads, x0s, z0s, yav_p = get_datas(N, edge, taito, v, 'cont_bend', 800)
+            angles_av, angles, Rads, x0s, z0s, yav_p \
+                    = get_datas(N, edge, taito, v, 'cont_bend', 800)
         
         #t           =   ef[:,0] 
         z           =   ef[:,1] 

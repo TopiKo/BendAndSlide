@@ -118,7 +118,7 @@ def get_shifts(traj, positions_t):
         for ilay, layer_ind in enumerate(layer_indices_f):
             for i in layer_ind:
                 #print ilay
-                if 1 in pair_table[i]:
+                if 1 in pair_table[i] and atoms[i].number == 6:
                     j   =   np.where(pair_table[i] == 1)[0][0]
                     #print i,j 
                     

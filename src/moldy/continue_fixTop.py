@@ -8,7 +8,7 @@ Created on 27.1.2015
 # *************************************
 
 
-from ase import units
+from ase import units, Atoms
 import numpy as np
 from ase.constraints import FixAtoms, FixedPlane
 from ase.calculators.lammpsrun import LAMMPS
@@ -51,6 +51,18 @@ interval    =   10              # interval for writing stuff down
 
 n_begin     =   500
 
+'''
+def remove_atoms(atoms, indices):
+        
+    atoms_n =   Atoms()
+    atoms_n.set_cell(atoms.get_cell())
+    atoms_n.set_pbc(atoms.get_pbc())
+    for ia, a in enumerate(atoms):
+        if ia not in indices: 
+            atoms_n +=  a
+    
+    return atoms_n
+'''
 def run_moldy(N, save = False):
     
     if release:
@@ -72,6 +84,11 @@ def run_moldy(N, save = False):
     traj        =   PickleTrajectory(mdfile_read, 'r')
     atoms       =   traj[0]
     
+    #if release:
+        #top_rm_inds =   get_ind(atoms.positions.copy(), 'top', 2, [])
+        #atoms       =   remove_atoms(atoms, top_rm_inds) 
+        #fixtop      =   0
+        
     params['ncores']    =   ncores
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
@@ -84,23 +101,26 @@ def run_moldy(N, save = False):
     #constraints_init    =   []
     
     left        =   get_ind(atoms.positions.copy(), 'left', 2, bond)
-    top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
     rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop)
+    top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
     
     # use initial atoms to obtain fixes
     if not release:
         atoms   =   traj[-1]
+        
     elif release:
         atoms   =   traj[n_begin]
+        #atoms   =   remove_atoms(atoms, top_rm_inds) 
+        
+    
         
     if not release:
         cell_h  =   atoms.get_cell()[2,2]
         zmax    =   np.max(atoms.positions[top,2])
         atoms.translate([0.,0., cell_h - zmax - 10])
+        fix_top =   FixAtoms(indices = top)
     
     fix_left    =   FixAtoms(indices = left)
-    fix_top     =   FixAtoms(indices = top)
-    
     add_kc      =   KC_potential_p(params)
 
     
@@ -109,7 +129,6 @@ def run_moldy(N, save = False):
 
     constraints.append(add_kc)
     constraints.append(fix_left)
-    constraints.append(fix_top)
     
     for ind in rend:
         fix_deform  =   FixedPlane(ind, (0., 0., 1.))
@@ -122,6 +141,7 @@ def run_moldy(N, save = False):
         constraints_init    =   constraints
         
     elif not release:
+        constraints.append(fix_top)
         for const in constraints_def:
             constraints.append(const)
         constraints_simul   =   constraints
@@ -159,8 +179,8 @@ def run_moldy(N, save = False):
     if save:    traj    =   PickleTrajectory(mdfile, 'w', atoms)
     else:       traj    =   None
     
-    view(atoms)
-    
+    #view(atoms)
+    #exit()
     # FIX 
     #if T != 0:
     #    constraints_therm   =   []

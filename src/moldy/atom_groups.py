@@ -164,8 +164,9 @@ def strip(arr, strip_arr):
     
     new_arr = []
     for val in arr:
+        
+        dont_add    =   False
         if len(strip_arr) != 0:
-            dont_add    =   False
             for nthis in strip_arr:
                 if val == nthis: 
                     dont_add = True
