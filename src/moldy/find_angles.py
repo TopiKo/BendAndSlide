@@ -14,6 +14,9 @@ import matplotlib.cm as cmx
 from matplotlib import gridspec
 import matplotlib.colors as mcolors
 
+s_f_size    =   (4,1.8)
+ball_size   =   5
+
 def kink_func(xs,*args):
     
     a2,b1,b2,c   =   args
@@ -88,7 +91,7 @@ def plot_KC_atoms(atoms, e_KC, layer_indices, edif_max, limits, path_to_fig):
     xdata       =   atoms.positions[:,0]
     ydata       =   atoms.positions[:,2]
     
-    s0          =   10
+    s0          =   ball_size
     s           =   [s0 + e_KC[i]/edif_max*s0**np.sqrt(1.5) for i in range(len(xdata))]
     
     axf         =   ax.scatter(xdata, ydata, c=e_KC, s=s, cmap=mpl.cm.cool, \
@@ -259,6 +262,133 @@ def plot_atoms2(positions_t, angles_t, angles_av_t, Rads_t, \
     plt.savefig(path_to_fig, dpi = 100)
     plt.clf()
     plt.close()
+    
+def plot_KC_single(positions_t, angles_t, angles_av_t, Rads_t, \
+                   z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, stack, z_t, bond, izs, \
+                   edif_min, edif_max, limits, line_limits, e_KC, shift_table, \
+                   path_to_fig):
+    
+    
+    
+    _, axs          =   plt.subplots(len(izs), figsize = (s_f_size[0], s_f_size[1]*len(izs)*1.3))
+    
+    for i, iz in enumerate(izs):
+    
+        layer_indices_f \
+                    =   find_layers(positions_t[0])[1]
+        positions   =   positions_t[iz]   
+        angles      =   angles_t[iz]
+        Rads        =   Rads_t[iz]
+        z0s         =   z0s_t[iz]
+        x0s         =   x0s_t[iz]
+        z           =   z_t[iz]  
+        
+        if i == 0:
+            title   =   'KC and corrugation %s, %s' %(edge, stack)
+        else:
+            title   =   '' 
+        
+        plot_KC(axs[i], N, positions, e_KC[iz] - e_KC[0], layer_indices_f, angles, Rads, z0s, x0s, z, \
+                limits, line_limits, shift_table[iz], edif_min, edif_max, edge, bond, title)
+    
+    plt.savefig(path_to_fig, dpi = 125)
+    
+    plt.clf()
+    plt.close()
+
+def plot_Cor_single(positions_t, angles_t, angles_av_t, Rads_t, \
+                   z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, stack, z_t, bond, izs, \
+                   edif_min, edif_max, limits, line_limits, shift_table, path_to_fig):
+    
+    _, axs          =   plt.subplots(len(izs), figsize = (s_f_size[0], s_f_size[1]*len(izs)))
+    
+
+    for i, iz in enumerate(izs):
+        
+        if i == 0:
+            title   =   'Corrugation %s, %s' %(edge, stack)
+        else:
+            title   =   '' 
+        
+        plot_corrugation(axs[i], shift_table[iz], bond, limits, line_limits, edge, title)
+    
+    plt.savefig(path_to_fig, dpi = 125)
+    
+    plt.clf()
+    plt.close()
+
+
+def plot_il_single(positions_t, angles_t, angles_av_t, Rads_t, \
+                   z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, stack, z_t, bond, izs, \
+                   limits, line_limits, il_dist, path_to_fig):
+    
+    _, axs          =   plt.subplots(len(izs), figsize = (s_f_size[0], s_f_size[1]*len(izs)))
+    
+    layer_indices_f \
+                    =   find_layers(positions_t[0])[1]
+
+    for i, iz in enumerate(izs):
+        
+        if i == 0:
+            title   =   'interlayer dist %s, %s' %(edge, stack)
+        else:
+            title   =   '' 
+            
+        positions   =   positions_t[iz]   
+        
+        plot_il(axs[i], N, positions, layer_indices_f, limits, il_dist[iz], title)
+    
+    plt.savefig(path_to_fig, dpi = 125)
+    
+    plt.clf()
+    plt.close()
+
+def plot_strech_single(positions_t, angles_t, angles_av_t, Rads_t, \
+                   z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, stack, z_t, bond, izs, \
+                   limits, line_limits, path_to_fig):
+    
+    _, axs          =   plt.subplots(len(izs), figsize = (s_f_size[0], s_f_size[1]*len(izs)))
+    
+    for i, iz in enumerate(izs):
+        
+        if i == 0:
+            title   =   'Average bond lengths %s, %s' %(edge, stack)
+        else:
+            title   =   '' 
+        plot_streches(axs[i], strech_t[iz], limits, title)
+    
+    plt.savefig(path_to_fig, dpi = 125)
+    
+    plt.clf()
+    plt.close()
+
+def plot_sY_single(positions_t, angles_t, angles_av_t, Rads_t, \
+                   z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, stack, z_t, bond, iz, \
+                   edif_min, edif_max, limits, line_limits, e_KC, shift_table, \
+                   il_dist, path_to_fig):
+    
+    _, ax1  =   plt.subplots(1, figsize = s_f_size)
+    
+    plot_shift_Y(ax1, z_t, yav_t, iz, line_limits)
+    
+    plt.savefig(path_to_fig, dpi = 125)
+    
+    plt.clf()
+    plt.close()
+
+def plot_aEp_single(positions_t, angles_t, angles_av_t, Rads_t, \
+                   z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, stack, z_t, bond, iz, \
+                   edif_min, edif_max, limits, line_limits, e_KC, shift_table, \
+                   il_dist, path_to_fig):
+    
+    _, ax1  =   plt.subplots(1, figsize = s_f_size)
+
+    plot_angle_epot(ax1, ep, z_t, angles_av_t, iz, line_limits)
+    
+    plt.savefig(path_to_fig, dpi = 125)
+    
+    plt.clf()
+    plt.close()
 
 def plot_atoms3(positions_t, angles_t, angles_av_t, Rads_t, \
                z0s_t, x0s_t, yav_t, strech_t, ep, N, edge, z_t, bond, iz, \
@@ -266,39 +396,40 @@ def plot_atoms3(positions_t, angles_t, angles_av_t, Rads_t, \
                il_dist, path_to_fig):
     
     
-    fig2    =   plt.subplots(figsize = (6,12))
+    _       =   plt.subplots(figsize = (6,14))
     
-    gs      =   gridspec.GridSpec(4, 1, height_ratios=[2, 2, 2, 1]) 
+    gs      =   gridspec.GridSpec(5, 1, height_ratios=[2, 2, 2, 1, 1]) 
     #gs      =   gridspec.GridSpec(3, 1, height_ratios=[2, 2, 1]) 
 
     ax1     =   plt.subplot(gs[0])
     ax2     =   plt.subplot(gs[1])
     ax3     =   plt.subplot(gs[2])
     ax4     =   plt.subplot(gs[3])
-    #ax5     =   plt.subplot(gs[4])
+    ax5     =   plt.subplot(gs[4])
     #ax6     =   plt.subplot(gs[5])
     
     layer_indices_f \
                 =   find_layers(positions_t[0])[1]
     positions   =   positions_t[iz]   
-    angles  =   angles_t[iz]
-    Rads    =   Rads_t[iz]
-    z0s     =   z0s_t[iz]
-    x0s     =   x0s_t[iz]
-    z       =   z_t[iz]   
+    angles      =   angles_t[iz]
+    Rads        =   Rads_t[iz]
+    z0s         =   z0s_t[iz]
+    x0s         =   x0s_t[iz]
+    z           =   z_t[iz]   
     
-
+   
     ########################
     plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z, \
-            limits, line_limits, shift_table, edif_min, edif_max, edge, bond)
+            limits, line_limits, shift_table, edif_min, edif_max, edge, bond, \
+            'KC-energy eV, edge=%s, N=%i' %(edge, N))
     
-    plot_il(ax2, N, positions, layer_indices_f, limits, il_dist)
+    plot_il(ax2, N, positions, layer_indices_f, limits, il_dist, 'Interlayer distance')
     
-    plot_streches(ax3, strech_t[iz], limits)
+    plot_streches(ax3, strech_t[iz], limits, 'Average bond lengths')
     
     plot_corrugation(ax4, shift_table, bond, limits, line_limits, edge)
     
-    #plot_shift_Y(ax5, z_t, yav_t, iz, line_limits)
+    plot_shift_Y(ax5, z_t, yav_t, iz, line_limits)
     
     #plot_angle_epot(ax6, ep, z_t, angles_av_t, iz, line_limits)
 
@@ -308,7 +439,7 @@ def plot_atoms3(positions_t, angles_t, angles_av_t, Rads_t, \
     plt.clf()
     plt.close()
 
-def plot_corrugation(ax, shift_table, bond, limits, line_limits, edge):
+def plot_corrugation(ax, shift_table, bond, limits, line_limits, edge, title = ''):
     
     xs      =   shift_table[:,1]
     shifts  =   shift_table[:,-2]
@@ -324,14 +455,15 @@ def plot_corrugation(ax, shift_table, bond, limits, line_limits, edge):
         
     ax.set_ylim(line_limits[8] - 1, line_limits[9] + 1)
     ax.set_xlim(limits[0] - 1, limits[1] + 1)
-    
+    ax.set_title(title)
     # END CORRUGATION
 
 def plot_shift_Y(ax, z_t, yav_t, iz, line_limits):
     
     for ai in range(len(yav_t[0])):
         ax.plot(z_t[:iz], yav_t[:iz,ai], color = 'black', label = r'layer %i' %ai)
-        
+    
+    
     ax.set_xlim(line_limits[0], line_limits[1])
     ax.set_ylim(line_limits[6], line_limits[7])
     
@@ -355,7 +487,7 @@ def plot_angle_epot(ax, ep, z_t, angles_av_t, iz, line_limits):
     ax2a.set_ylabel(r'Pot E eV')
 
 def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z, \
-            limits, line_limits, shift_table, edif_min, edif_max, edge, bond):
+            limits, line_limits, shift_table, edif_min, edif_max, edge, bond, title = ''):
     
     
     layer_indices   =   layer_indices_f[:-2]
@@ -383,11 +515,15 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
         angles_av  +=   angles[i]/n   
     
     
-    
-    if edge == 'arm':   smax_min    =   3*bond + 1
-    elif edge == 'zz':  smax_min    =   np.sqrt(3)*bond*3 + 1
-    
     smin        =   line_limits[8]
+    
+    if edge == 'arm':   
+        smax_min    =   3*bond + 1
+        ticks_shift =   [smin, 0., bond, 2*bond, 3*bond]
+    elif edge == 'zz':  
+        smax_min    =   np.sqrt(3)*bond*3 + 1
+        ticks_shift =   [smin, 0., np.sqrt(3)*bond, 2*np.sqrt(3)*bond, 3*np.sqrt(3)*bond]
+    
     smax        =   np.max([smax_min, line_limits[9]])
     s_range     =   smax - smin
     
@@ -433,7 +569,7 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
     '''    
    
     # COLOR PLOT
-    s0          =   10
+    s0          =   ball_size
     #s           =   [s0 + e_KC[i]/edif_max*s0**np.sqrt(1.5) for i in range(len(xdata))]
     
     # Plot fits..
@@ -470,11 +606,14 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
     
     #axf2        =   plt.contourf(Z, levels, cmap=shift_cmap)
     cbar4       =   plt.colorbar(axg, cax=cax4, \
-                                 ticks = [smin, 0., bond, 2*bond, 3*bond]) #CS3, cax=cax4, norm=cNorm, orientation='vertical')
-    
+                                 ticks = ticks_shift) #CS3, cax=cax4, norm=cNorm, orientation='vertical')
     cbar4.ax.set_yticklabels(['min', '0', '1. st', '2. nd', '3. th'])
+    cbar3.ax.set_xticklabels(np.around(np.linspace(edif_min, edif_max, 5), 3))
     
-    ax1.set_title(r'KC-energy eV, edge=%s, N=%i' %(edge, N))
+    
+    if title != '':
+        ax1.set_title(title)
+    
     y_scale =   limits[3] - limits[2]
     ax1.text(x_min, limits[2] + y_scale/10, r'angle = %.2f Deg' %angles_av, fontsize=12)
     ax1.text(x_min, limits[2] + y_scale/10*2, r'z = %.2f Angst' %z, fontsize=12)
@@ -482,7 +621,7 @@ def plot_KC(ax1, N, positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, z,
 
 
 def plot_il(ax, N, positions, layer_indices_f, \
-            limits, il_dist):
+            limits, il_dist, title = ''):
     
     
     xdata       =   positions[:,0]
@@ -496,7 +635,7 @@ def plot_il(ax, N, positions, layer_indices_f, \
     ypoint  =   il_dist[:,1]
     ilh     =   il_dist[:,2]
     
-    s0      =   10
+    s0      =   ball_size
     ratio   =   (il_av - il_min)/(il_max - il_min)
     
     orig_map    =   mpl.cm.RdBu_r
@@ -505,9 +644,9 @@ def plot_il(ax, N, positions, layer_indices_f, \
     ax.scatter(xdata, ydata, s=s0, edgecolors='none', \
                color = 'black', alpha = .4, zorder = -1)
     
-    ax2         =   ax.scatter(xpoint, ypoint, c=ilh, s=s0*1.5, cmap=rvb, \
+    ax2         =   ax.scatter(xpoint, ypoint, c=ilh, s=s0*1.1, cmap=rvb, \
                                vmin=il_min, vmax=il_max, edgecolors='none')
-    
+   
     ax.set_ylim(limits[2], limits[3])
     ax.set_aspect('equal') 
     
@@ -518,12 +657,12 @@ def plot_il(ax, N, positions, layer_indices_f, \
     cbar3       =   plt.colorbar(ax2, cax=cax3, orientation = 'vertical',\
                                   ticks = np.linspace(il_min, il_max, 5))
     
-    
-    ax.set_title(r'Interlayer distance')
+    if title != '':
+        ax.set_title(title)
     ax.axis('off')
     #################
 
-def plot_streches(ax, streches, limits):
+def plot_streches(ax, streches, limits, title = ''):
     
     
     xdata       =   streches[:,0]
@@ -542,18 +681,18 @@ def plot_streches(ax, streches, limits):
             
 
     strech_avS  =   1.39695   #np.average(strech_av)
-    strech_min, strech_max  =   strech_avS*0.99, strech_avS*1.01    
+    strech_min, strech_max  =   strech_avS*0.995, strech_avS*1.005    
 
     
     #xpoint  =   il_dist[:,0]
     #ypoint  =   il_dist[:,1]
     #ilh     =   il_dist[:,2]
     
-    s0      =   10
+    s0      =   ball_size
     ratio   =   (strech_avS - strech_min)/(strech_max - strech_min)
     
     orig_map    =   mpl.cm.RdBu_r
-    rvb = shiftedColorMap(orig_map, start=0., midpoint=ratio, stop=1., name='shrunk')    
+    rvb         =   shiftedColorMap(orig_map, start=0., midpoint=ratio, stop=1., name='shrunk')    
     
     #ax.scatter(xdata, ydata, s=s0, edgecolors='none', \
     #           color = 'black', alpha = .4, zorder = -1)
@@ -571,16 +710,17 @@ def plot_streches(ax, streches, limits):
     cbar3       =   plt.colorbar(ax2, cax=cax3, orientation = 'vertical',\
                                   ticks = np.linspace(strech_min, strech_max, 5))
     
-    cbar3.ax.set_yticklabels(['-1%', '-0.5%', 'Gr', '+0.5%', '+1%'])
-    ax.set_title(r'Average bond lengths')
+    cbar3.ax.set_yticklabels(['-0.5%', '-0.25%', 'Gr', '+0.25%', '+0.5%'])
+    if title != '':
+        ax.set_title(title)
     ax.axis('off')
     #################
     
 
 def plot_plotLogAtoms(positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, \
-            limits, edif_min, edif_max):
+            limits, edif_min, edif_max, fig_size = (16,10)):
     
-    ax1         =   plt.subplot(111)
+    _, ax1      =   plt.subplots(1, figsize = fig_size)
     layer_indices   =   layer_indices_f[:-2]
 
     n           =   len(layer_indices) 
@@ -603,15 +743,14 @@ def plot_plotLogAtoms(positions, e_KC, layer_indices_f, angles, Rads, z0s, x0s, 
         angles_av  +=   angles[i]/n   
     
     
-    s0  =   10
-    
-    axf         =   ax1.scatter(xdata, ydata, c=e_KC, s=s0, cmap=mpl.cm.RdBu_r, \
-                               vmin=edif_min, vmax=edif_max, edgecolors='none', zorder = -10000)
+    s0      =   ball_size*5
+    axf     =   ax1.scatter(xdata, ydata, c=e_KC, s=s0, cmap=mpl.cm.RdBu_r, \
+                            vmin=edif_min, vmax=edif_max, edgecolors='none', zorder = -10000)
 
     for i in range(n):
         ax1.plot(xsets[:,i], zsets[:,i], alpha = 1.3,  color = 'black')
     
-    print xsets[:,i], zsets[:,i]
+    #print xsets[:,i], zsets[:,i]
     
     ax1.set_ylim(limits[2], limits[3])
     ax1.set_aspect('equal') 
@@ -718,7 +857,7 @@ def plot_atoms(axs, traj_init, traj_c, angles_t, angles_av_t, Rads_t, \
     
     return im
         
-def get_angle_set(positions_t, indent = 'fixTop', round_kink = True):
+def get_angle_set(positions_t, therm_idx, indent = 'fixTop', round_kink = True):
     
     
             
@@ -784,7 +923,7 @@ def get_angle_set(positions_t, indent = 'fixTop', round_kink = True):
                 Rmax            =   (max(xdata) - kink)*1.2
                 
                 
-                if  j < len_t/40:
+                if  j < therm_idx + len_t/40:
                     ques2       =   np.array([Rmax/2., 0., hz, kink])
                 else:
                     ques2       =   np.array([Rads[j - 1, i], angles[j - 1, i]/360*2*np.pi, \

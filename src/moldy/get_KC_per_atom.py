@@ -40,12 +40,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os
 
-
+edge        =   'zz' 
 path        =   '/space/tohekorh/BendAndSlide/test_KC/'
-path_corr   =   path + 'trajectories/corrugation_trajectory_rebo_KC_iaS_p_arm.traj'
+path_corr   =   path + 'trajectories/corrugation_trajectory_rebo_KC_iaS_p_%s.traj' %edge
 
 traj        =   PickleTrajectory(path_corr, 'r')
 view(traj[0])
+cell    =   traj[0].get_cell()
 e_KC    =    get_KC(traj)
 
 xmin    =   np.min(traj[0].positions[:,0])
@@ -69,9 +70,15 @@ for e in e_KC:
         emax = emax_test    
 
 for i, e in enumerate(e_KC):
-    x,y =   traj[i].positions[:,0] ,traj[i].positions[:,2]
+    x,y =   traj[i].positions[:,0], traj[i].positions[:,2] + traj[i].positions[:,1]/np.sqrt(3)
     ax  =   plt.scatter(x,y, s=100, c=e, cmap=mpl.cm.RdBu_r, vmin=emin, vmax=emax)
-    ax  =   plt.scatter(x + 3*1.42,y, s=100, c=e, cmap=mpl.cm.RdBu_r, vmin=emin, vmax=emax)
+    if edge == 'arm':
+        ax  =   plt.scatter(x + cell[0,0],y, s=100, c=e, cmap=mpl.cm.RdBu_r, vmin=emin, vmax=emax)
+        ax  =   plt.scatter(x - cell[0,0],y, s=100, c=e, cmap=mpl.cm.RdBu_r, vmin=emin, vmax=emax)
+    elif edge == 'zz':
+        ax  =   plt.scatter(x + cell[0,0],y, s=100, c=e, cmap=mpl.cm.RdBu_r, vmin=emin, vmax=emax)
+        ax  =   plt.scatter(x - cell[0,0],y, s=100, c=e, cmap=mpl.cm.RdBu_r, vmin=emin, vmax=emax)
+    
     
     plt.ylim([3, 10])
     plt.xlim([xmin - 1, xmax + 1])
@@ -81,6 +88,6 @@ for i, e in enumerate(e_KC):
     plt.clf()
     
 os.system('mencoder "mf://%spic*.png" -mf type=png:fps=10  \
-            -ovc lavc -lavcopts vcodec=wmv2 -oac copy -o %svideo_corr.mpg' %(path, path)) 
+            -ovc lavc -lavcopts vcodec=wmv2 -oac copy -o %svideo_corr_%s.mpg' %(path, path, edge)) 
 os.system('rm -f %spic*.png' %path) 
-''' 
+'''

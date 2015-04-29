@@ -97,7 +97,7 @@ def run_moldy(N, save = False):
     #constraints_init    =   []
     
     left        =   get_ind(atoms.positions.copy(), 'left', 2, bond)
-    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop)
+    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop, edge)
 
 
     heights     =   np.zeros(len(traj_a))

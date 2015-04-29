@@ -14,6 +14,7 @@ import sys
 import matplotlib.colors as mcolors
 import os.path
 
+
 def saveAndPrint(atoms, traj = None, print_dat = False):    
     epot = atoms.get_potential_energy() #/len(atoms)
     ekin = atoms.get_kinetic_energy()   #/len(atoms)
@@ -480,25 +481,51 @@ def get_fileName(N, indent, taito, *args):
         plotShiftlog=   path_f + 'Shift_log_N=%i_v=%.2f%s%s'     %(N, v, edge, cont)
         plotIlDistlog=  path_f + 'Il_dist_log_N=%i_v=%.2f%s%s'   %(N, v, edge, cont)
         plotStrechlog=  path_f + 'Strech_log_N=%i_v=%.2f%s%s'    %(N, v, edge, cont)
+        plotForcelog=   path_f + 'Force_log_N=%i_v=%.2f%s%s'     %(N, v, edge, cont)
         
         return mdfile, mdlogfile, plotlogfile, plotKClog, \
-            plotShiftlog, plotIlDistlog, plotStrechlog, mdrelax
+            plotShiftlog, plotIlDistlog, plotStrechlog, plotForcelog, mdrelax
     
     
     else:
         raise
     
 
-def get_traj_and_ef(mdfile, mdLogFile, cmdfile, cmdLogFile):
+def get_traj_and_ef(mdfile, mdLogFile, cmdfile, cmdLogFile, edge):
     
-    traj        =   PickleTrajectory(mdfile, 'r')
-    ef          =   np.loadtxt(mdLogFile)
-    conc        =   False
+    from moldy.atom_groups import get_ind
+    
+    traj    =   PickleTrajectory(mdfile, 'r')
+    ef      =   np.loadtxt(mdLogFile)
+    conc    =   False
     
     posits  =   np.empty(len(traj), dtype = 'object')
+    ez      =   np.zeros(len(traj))
+    
+    rend    =   get_ind(traj[0].positions.copy(), \
+                       'rend', traj[0].get_chemical_symbols(), 2, edge)
+    
+    # correction for the fact that we are holding only one of the rightmost atoms.
+    if edge == 'zz':
+        r1  =   rend[0]
+        r2  =   rend[1]
+        posits1   =   traj[-2].positions
+        posits2   =   traj[-1].positions
+        
+        if      abs(posits1[r1,2] - posits2[r1,2] - (ef[-1,1] - ef[-2,1])) < 1e-6: hold = r1
+        elif    abs(posits1[r2,2] - posits2[r2,2] - (ef[-1,1] - ef[-2,1])) < 1e-6: hold = r2
+        else: 
+            print 'mita hiivaddia'
+            raise
+    else:
+        hold    =   rend
+            
     for i in range(len(traj)):
         posits[i]   =   traj[i].positions
-    
+        ez[i]       =   posits[i][hold,2]         
+        
+    ef[:,1]         =   ez[0] - ez
+
     if os.path.isfile(cmdLogFile):
         cef     =   np.loadtxt(cmdLogFile)
         cef[:,0]   +=   ef[-1,0]

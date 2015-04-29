@@ -101,7 +101,7 @@ def run_moldy(N, save = False):
     #constraints_init    =   []
     
     left        =   get_ind(atoms.positions.copy(), 'left', 2, bond)
-    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop)
+    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop, edge)
     top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
     
     # use initial atoms to obtain fixes

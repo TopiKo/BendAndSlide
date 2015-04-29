@@ -21,9 +21,10 @@ from ase.visualize import view
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution as mbd
 import sys
 
-N, v, M, edge, stack, T, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
-            int(sys.argv[3]), sys.argv[4], sys.argv[5], float(sys.argv[6]), int(sys.argv[7])
+#N, v, M, edge, stack, T, ncores   =   int(sys.argv[1]), float(sys.argv[2]), \
+#            int(sys.argv[3]), sys.argv[4], sys.argv[5], float(sys.argv[6]), int(sys.argv[7])
 
+N, v, M, edge, stack, T, ncores = 4, 1., 10000, 'arm', 'ab', 10,  2
 #N, v, M, edge, ncores   =   3, 1.,  10000, 'zz', 2 
 taito       =   False
 
@@ -60,22 +61,26 @@ def run_moldy(N, save = False):
                                                stacking = 'abc')[3]
     
     view(atoms)
-    exit()
+    #exit()
     params['ncores']    =   ncores
     params['positions'] =   atoms.positions.copy() 
     params['pbc']       =   atoms.get_pbc()
     params['cell']      =   atoms.get_cell().diagonal()
     params['ia_dist']   =   10
-    params['chemical_symbols']  =   atoms.get_chemical_symbols()
+    params['chemical_symbols']  \
+                        =   atoms.get_chemical_symbols()
     
     # FIX
     constraints =   []
-    
+    print 'hii'
     left        =   get_ind(atoms.positions.copy(), 'left', 2, bond)
     top         =   get_ind(atoms.positions.copy(), 'top', fixtop - 1, left)
-    rend_t      =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), 1)
-    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop)
+    rend_t      =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), 1, edge)
+    rend        =   get_ind(atoms.positions.copy(), 'rend', atoms.get_chemical_symbols(), fixtop, edge)
     
+    print rend
+    print 'hoo' 
+    exit()
     
     fix_left    =   FixAtoms(indices = left)
     fix_top     =   FixAtoms(indices = top)

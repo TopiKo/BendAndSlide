@@ -6,6 +6,12 @@ Created on 30.3.2015
 import numpy as np
 from aid.help import find_layers, get_pairs, get_pairs2
 from aid.help2 import extend_structure, local_normal, nrst_neigh
+from ase.calculators.lammpsrun import LAMMPS
+from aid.KC_parallel import KC_potential_p
+
+bond        =   1.39695
+a           =   np.sqrt(3)*bond # 2.462
+h           =   3.37
 
 def get_shifts_old(traj):
     
@@ -102,9 +108,9 @@ def get_shifts(traj, positions_t):
                                          traj[0].get_cell().diagonal())
     layer_neighbors =   nrst_neigh(traj[0].positions, posits_ext, 'layer')    
     layer_indices_f =   find_layers(traj[0].positions)[1]
-    #layer_indices   =   layer_indices_f[:-3]
+    #layer_indices  =   layer_indices_f[:-3]
     
-    # minL, maxL      =   1000., -1 
+    # minL, maxL    =   1000., -1 
     x_shift         =   np.empty(len(traj), dtype = 'object')
     il_dist_t       =   np.empty(len(traj), dtype = 'object')
     
@@ -135,11 +141,8 @@ def get_shifts(traj, positions_t):
                     
                     lr_k=   (ni[0]*rij[2] - ni[2]*rij[0])/np.abs(ni[0]*rij[2] - ni[2]*rij[0])
                     
-                    
                     #if ilay != len(layer_indices_f) - 2: 
                     #    pav.append([ri[0], rj[0], ri[2], rj[2], lr_k*(pij + pji)/2., i])
-                    
-                    
                     
                     minD    =   10000.
                     take_k  =   None
@@ -225,3 +228,39 @@ def get_streches(traj, positions_t):
                 strech_t[i][ir, k + 2]  =   np.linalg.norm(tv)
                 
     return strech_t
+
+def get_forces_traj(traj, ncores): 
+    
+    force_t             =   np.empty(len(traj), dtype = 'object')
+    
+    parameters          =   {'pair_style':'rebo',
+                             'pair_coeff':['* * CH.airebo C H'],
+                             'mass'      :['1 12.0', '2 1.0'],
+                             'units'     :'metal', 
+                             'boundary'  :'f p f'}
+    
+    calc                =   LAMMPS(parameters=parameters) 
+    
+    params              =   {'bond':bond, 'a':a, 'h':h}
+    params['ncores']    =   ncores
+    params['positions'] =   traj[0].positions.copy() 
+    params['pbc']       =   traj[0].get_pbc()
+    params['cell']      =   traj[0].get_cell().diagonal()
+    params['ia_dist']   =   10
+    params['chemical_symbols']  =   traj[0].get_chemical_symbols()
+    
+    constraints     =   []
+    add_kc          =   KC_potential_p(params)
+    constraints.append(add_kc)
+    
+    for i in range(len(traj)):
+        atoms       =   traj[i]
+        force_t[i]  =   np.zeros((len(atoms), 3))
+        
+        atoms.set_calculator(calc)
+        atoms.set_constraint(constraints)
+        force_t[i]  =   atoms.get_forces(apply_constraint = True)
+        print i
+                
+    return force_t
+

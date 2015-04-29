@@ -35,12 +35,31 @@ def get_ind(positions, ind, *args):
     if ind == 'rend':
         chem_symb   =   args[0]
         top_d       =   args[1]
+        edge        =   args[2]
         lay_ind     =   find_layers(positions)[1][-top_d - 1]
         rend        =   [] 
         
         r0max       = 0
         ind_m       = None
+        n = 0
         
+        if edge == 'zz':
+            
+            nC  =   0
+            for ind in lay_ind:
+                if chem_symb[ind] == 'C': nC  +=  1
+                
+            pos_ind = np.zeros((nC, 2)) 
+            
+            for ind in lay_ind:
+                r   =   positions[ind]
+                if chem_symb[ind] == 'C': 
+                    pos_ind[n,:] = [ind, r[0]]
+                    n   +=  1
+            
+            #pos_ind[pos_ind[:, 1].argsort()][:-2]
+            return pos_ind[pos_ind[:, 1].argsort()][-2:,0]
+                
         for ind in lay_ind:
             r = positions[ind]
             if r[0] > r0max and chem_symb[ind] == 'C': 

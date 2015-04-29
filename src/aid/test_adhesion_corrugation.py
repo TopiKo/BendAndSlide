@@ -175,14 +175,14 @@ def plot_adhesion(indents):
         adh_pot         =   datas[indent]
         adh_pot[:,1]    =   adh_pot[:,1] - np.min(adh_pot[:,1])   
         hmin            =   adh_pot[np.where(adh_pot[:,1] == np.min(adh_pot[:,1]))[0][0], 0]
-        ax.plot(adh_pot[:,0], adh_pot[:,1], label = indent)
+        ax.plot(adh_pot[:,0], adh_pot[:,1], label = indent + ' hopm = %.2f' %hmin)
         ax.scatter(hmin, 0)
     
     ax.set_title('Adhesion energy, per atom')
     ax.set_xlabel('height, Angst')
     ax.set_ylabel('Pot. E, eV')
     plt.legend(frameon = False)
-    #plt.savefig(path + 'pictures/Adhesion_energy.svg')
+    plt.savefig(path + 'pictures/Adhesion_energy.pdf')
     plt.show()    
 
 def plot_corrugation(indents):
@@ -216,7 +216,7 @@ def plot_corrugation(indents):
     ax.set_xlabel('x, Angst')
     ax.set_ylabel('Pot. E, eV')
     plt.legend(frameon = False)
-    #plt.savefig(path + 'pictures/corrugation_energy.svg')
+    plt.savefig(path + 'pictures/corrugation_energy.pdf')
     plt.show()    
     
 def get_adhesion_LJ(zset, CperArea):
@@ -274,7 +274,6 @@ def corrugationAndAdhesion(params):
     atoms_init.set_cell(diag_cell)
     
     atoms_init.center()
-    
     view(atoms_init)
     # Save something:
     params['ncores']        =   2
@@ -286,7 +285,7 @@ def corrugationAndAdhesion(params):
     params['chemical_symbols']  =   atoms_init.get_chemical_symbols()
     
     # This controls how far the upper layer is pulled:
-    hmax                    =   (params['cell'][2] - h)/5.1
+    hmax                    =   (params['cell'][2] - h)/2.1
     
     # FIX
     # Certain fixes are imposed. Note the KC and LJ - potential are as constraints
@@ -393,8 +392,8 @@ def corrugationAndAdhesion(params):
             atoms.positions     =   init_posits
             print 'Corrugation'
             
-            data_corr[indent]   =   get_corrugation_energy(atoms, constraints, \
-                                                           bond, bottom, top, indent, acc)
+            #data_corr[indent]   =   get_corrugation_energy(atoms, constraints, \
+            #                                               bond, bottom, top, indent, acc)
             
             
         else:
@@ -404,7 +403,7 @@ def corrugationAndAdhesion(params):
     
     
     plot_adhesion(indents)
-    plot_corrugation(indents)
+   # plot_corrugation(indents)
     
        
     
